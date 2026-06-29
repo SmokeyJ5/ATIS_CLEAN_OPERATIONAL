@@ -1,0 +1,11 @@
+{
+  "selected_symbol": "SPY",
+  "multi_chart_layout": "6 Charts",
+  "linked_charts": false,
+  "data_mode": "Fallback",
+  "scanner_preset": "ETF",
+  "chart_timeframe": "Daily",
+  "notes": "Broad market, ETFs, VIX context, and economic calendar.",
+  "workspace_name": "Market Overview",
+  "saved_at": "2026-06-29 07:40:46 PM"
+}

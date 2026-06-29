@@ -1,0 +1,11 @@
+{
+  "selected_symbol": "TSLA",
+  "multi_chart_layout": "4 Charts",
+  "linked_charts": true,
+  "data_mode": "Fallback",
+  "scanner_preset": "Day Trade",
+  "chart_timeframe": "5m",
+  "notes": "Momentum scanner, AI decision, alerts, and charts.",
+  "workspace_name": "Day Trading",
+  "saved_at": "2026-06-29 07:40:46 PM"
+}

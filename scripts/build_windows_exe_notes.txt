@@ -1,0 +1,12 @@
+ATIS Windows Packaging Notes
+
+Recommended future command after PyInstaller is installed:
+
+pyinstaller --noconfirm --windowed --name ATIS_CLEAN_OPERATIONAL run_atis.py
+
+Before packaging:
+1. python tests\regression_smoke.py
+2. python run_atis.py
+3. Verify app startup
+4. Verify Diagnostics tab
+5. Verify Paper Trading remains simulated only

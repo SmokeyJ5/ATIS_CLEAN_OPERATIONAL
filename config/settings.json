@@ -1,0 +1,8 @@
+{
+  "data_mode": "Fallback",
+  "default_symbol": "TSLA",
+  "default_workspace": "Day Trading",
+  "theme": "Dark Professional",
+  "startup_tab": "Dashboard",
+  "paper_account_starting_cash": 100000
+}

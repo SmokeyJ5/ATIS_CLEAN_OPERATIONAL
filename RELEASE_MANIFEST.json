@@ -1,0 +1,30 @@
+{
+  "app": "ATIS Clean Operational",
+  "version": "v3.0.0-rc1",
+  "phase": "Phase 18 Production Release Candidate",
+  "build_time": "2026-06-29 05:27:07 PM",
+  "core_features": [
+    "Single global search",
+    "Fallback/live market data architecture",
+    "Professional scanner",
+    "Professional chart engine",
+    "AI decision engine",
+    "Portfolio risk manager",
+    "Trade journal analytics",
+    "Alerts automation",
+    "Market intelligence",
+    "Multi-chart workspace",
+    "Workspace manager",
+    "Paper trading simulator",
+    "Strategy lab",
+    "Institutional command center",
+    "Diagnostics",
+    "Plugin/API framework"
+  ],
+  "safety": [
+    "No real broker orders",
+    "Live broker adapter disabled",
+    "Paper trading only",
+    "Fallback mode available"
+  ]
+}

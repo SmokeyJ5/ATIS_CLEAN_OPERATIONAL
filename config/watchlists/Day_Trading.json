@@ -1,0 +1,12 @@
+{
+  "name": "Day Trading",
+  "symbols": [
+    "AAPL",
+    "AMD",
+    "MSFT",
+    "NVDA",
+    "QQQ",
+    "SPY",
+    "TSLA"
+  ]
+}

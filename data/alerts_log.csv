@@ -1,0 +1,6 @@
+time,ticker,alert,level,status,message
+2026-06-29 05:45:03 PM,TSLA,VWAP Reclaim,241.3,ACTIVE,TSLA is above VWAP.
+2026-06-29 05:45:03 PM,TSLA,EMA Alignment,9>20,ACTIVE,Price is above 9 EMA and 9 EMA is above 20 EMA.
+2026-06-29 05:45:03 PM,TSLA,Volume Spike,3.4x,ACTIVE,Relative volume is above 3x.
+2026-06-29 05:45:03 PM,TSLA,New Intraday High,247.2,ACTIVE,Symbol is making/testing intraday high.
+2026-06-29 05:45:03 PM,TSLA,Catalyst Flag,News,ACTIVE,News/catalyst flag is active.
