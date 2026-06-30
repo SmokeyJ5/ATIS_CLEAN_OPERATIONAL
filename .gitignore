@@ -1,2 +1,9 @@
 __pycache__/
 *.pyc
+logs/
+data/paper_*.csv
+data/paper_*.json
+build/
+dist/
+installer_output/
+*.spec
