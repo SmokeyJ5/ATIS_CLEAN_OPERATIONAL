@@ -2205,8 +2205,6 @@ BUSINESS SUMMARY:
             self.update_command_center(row)
         if hasattr(self, "scanner"):
             self.run_professional_scanner()
-        if hasattr(self, "watchlist_report_text"):
-            self.refresh_watchlists()
         if hasattr(self, "event_bus_text"):
             self.refresh_event_bus()
 
