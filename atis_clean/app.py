@@ -1125,7 +1125,7 @@ class ATISClean(QMainWindow):
             trade = planned_trade_from_row(self.selected)
             trade["action"] = side
             trade["shares"] = qty
-            trade["entry"] = price if side == "BUY" else trade.get("entry", price)
+            trade["entry"] = price if side == "BUY" else trade.get("entry", "")
             trade["exit"] = price if side == "SELL" else ""
             trade["result"] = "Filled"
             trade["notes"] = notes
