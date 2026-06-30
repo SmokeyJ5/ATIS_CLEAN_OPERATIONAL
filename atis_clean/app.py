@@ -57,7 +57,7 @@ class ATISClean(QMainWindow):
         self.setWindowTitle("ATIS CLEAN OPERATIONAL v4.0.1 WATCHLIST RANK HOTFIX")
         self.setMinimumSize(1300, 850)
         self.resize(1600, 930)
-        self.rows = market_data_engine.all_rows()
+        self.rows = []
         self.selected = None
         self.syncing = False
         self.scanner_results = []
