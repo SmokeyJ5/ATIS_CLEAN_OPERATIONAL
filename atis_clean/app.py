@@ -66,8 +66,7 @@ class ATISClean(QMainWindow):
         ensure_default_watchlists()
         self.build()
         self.data_mode.setCurrentText(self.settings.get("data_mode", "Fallback"))
-        default_symbol = self.settings.get("default_symbol", "TSLA")
-        self.load_symbol(default_symbol)
+        # Defer symbol loading until the user searches or selects a ticker.
 
     def panel(self, title):
         frame = QFrame()
