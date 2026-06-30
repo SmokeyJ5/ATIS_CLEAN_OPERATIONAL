@@ -7,10 +7,18 @@ import json
 from typing import Dict, List
 
 from atis_clean.core.paths import data_root
+from atis_clean.core.settings import load_settings
 
 
-STARTING_CASH = 100000.0
 ORDER_HEADERS = ["time", "ticker", "side", "quantity", "price", "value", "status", "notes"]
+
+
+def starting_cash() -> float:
+    settings = load_settings()
+    try:
+        return float(settings.get("paper_account_starting_cash", 100000.0))
+    except Exception:
+        return 100000.0
 
 
 def data_dir() -> Path:
@@ -30,13 +38,13 @@ def orders_path() -> Path:
 def ensure_account() -> dict:
     path = account_path()
     if not path.exists():
-        account = {"cash": STARTING_CASH, "realized_pnl": 0.0, "positions": {}}
+        account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
         save_account(account)
         return account
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        account = {"cash": STARTING_CASH, "realized_pnl": 0.0, "positions": {}}
+        account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
         save_account(account)
         return account
 
@@ -66,7 +74,7 @@ def load_orders() -> List[dict]:
 
 
 def reset_account() -> dict:
-    account = {"cash": STARTING_CASH, "realized_pnl": 0.0, "positions": {}}
+    account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
     save_account(account)
     ensure_orders_log()
     return account
