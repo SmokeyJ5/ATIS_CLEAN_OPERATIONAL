@@ -2192,7 +2192,8 @@ BUSINESS SUMMARY:
 
         text = self.row_report(row)
         workstation_text = self.full_market_workstation_report(row)
-        self.summary.setPlainText(workstation_text)
+        if not hasattr(self, "command_market_text"):
+            self.summary.setPlainText(workstation_text)
         self.decision_text.setPlainText(workstation_text)
         self.explorer.setPlainText(self.stock_explorer_report(row))
         self.ai_reasoning.setPlainText(self.ai_report(row))
