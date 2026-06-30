@@ -2203,6 +2203,18 @@ BUSINESS SUMMARY:
             self.update_command_center(row)
         if hasattr(self, "scanner"):
             self.run_professional_scanner()
+        if hasattr(self, "paper_review_text"):
+            ai = row.get("ai_decision") or build_ai_decision(row)
+            self.paper_review_text.setPlainText(
+                f"AI ORDER REVIEW — {row['ticker']}\n\n"
+                f"Action: {ai['ai_action']}\n"
+                f"AI Score: {ai['ai_score']}/100\n"
+                f"Confidence: {ai['ai_confidence']}\n"
+                f"Entry: {ai['entry_zone']}\n"
+                f"Stop: {ai['stop_level']}\n"
+                f"Target: {ai['target_zone']}\n\n"
+                "Paper trading only. No real broker order is sent."
+            )
         if hasattr(self, "event_bus_text"):
             self.refresh_event_bus()
 
