@@ -13,6 +13,33 @@ from atis_clean.core.settings import load_settings
 ORDER_HEADERS = ["time", "ticker", "side", "quantity", "price", "value", "status", "notes"]
 
 
+def _normalize_position(pos: dict) -> dict:
+    if not isinstance(pos, dict):
+        return {"lots": []}
+    if "lots" in pos:
+        return pos
+    quantity = int(pos.get("quantity", 0))
+    avg_cost = float(pos.get("avg_cost", 0.0))
+    if quantity <= 0:
+        return {"lots": []}
+    return {"lots": [{"quantity": quantity, "cost": avg_cost}]}
+
+
+def _position_quantity(pos: dict) -> int:
+    pos = _normalize_position(pos)
+    return sum(int(l.get("quantity", 0)) for l in pos.get("lots", []))
+
+
+def _position_avg_cost(pos: dict) -> float:
+    pos = _normalize_position(pos)
+    lots = pos.get("lots", [])
+    total_qty = _position_quantity(pos)
+    if total_qty <= 0:
+        return 0.0
+    total_cost = sum(int(l.get("quantity", 0)) * float(l.get("cost", 0.0)) for l in lots)
+    return total_cost / total_qty
+
+
 def starting_cash() -> float:
     settings = load_settings()
     try:
@@ -92,13 +119,10 @@ def buy(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
     if value > float(account.get("cash", 0)):
         return {"status": "REJECTED", "message": "Not enough paper cash."}
 
-    pos = account["positions"].get(ticker, {"quantity": 0, "avg_cost": 0.0})
-    old_qty = int(pos["quantity"])
-    old_cost = float(pos["avg_cost"])
-    new_qty = old_qty + quantity
-    new_avg = ((old_qty * old_cost) + value) / new_qty if new_qty else 0
-
-    account["positions"][ticker] = {"quantity": new_qty, "avg_cost": round(new_avg, 4)}
+    pos = account["positions"].get(ticker)
+    pos = _normalize_position(pos) if pos is not None else {"lots": []}
+    pos["lots"].append({"quantity": quantity, "cost": round(price, 4)})
+    account["positions"][ticker] = pos
     account["cash"] = round(float(account["cash"]) - value, 2)
     save_account(account)
 
@@ -126,16 +150,29 @@ def sell(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
 
     if quantity <= 0:
         return {"status": "REJECTED", "message": "Quantity must be positive."}
-    if not pos or int(pos.get("quantity", 0)) < quantity:
+    if not pos or _position_quantity(pos) < quantity:
         return {"status": "REJECTED", "message": "Not enough shares to sell."}
 
-    avg_cost = float(pos["avg_cost"])
     value = round(quantity * price, 2)
-    realized = round((price - avg_cost) * quantity, 2)
+    pos = _normalize_position(pos)
+    remaining = quantity
+    realized = 0.0
+    while remaining > 0 and pos["lots"]:
+        lot = pos["lots"][0]
+        lot_qty = int(lot.get("quantity", 0))
+        lot_cost = float(lot.get("cost", 0.0))
+        if lot_qty <= remaining:
+            realized += round((price - lot_cost) * lot_qty, 2)
+            pos["lots"].pop(0)
+            remaining -= lot_qty
+        else:
+            realized += round((price - lot_cost) * remaining, 2)
+            lot["quantity"] = lot_qty - remaining
+            remaining = 0
 
-    remaining = int(pos["quantity"]) - quantity
-    if remaining > 0:
-        positions[ticker] = {"quantity": remaining, "avg_cost": avg_cost}
+    remaining_qty = _position_quantity(pos)
+    if remaining_qty > 0:
+        positions[ticker] = pos
     else:
         positions.pop(ticker, None)
 
@@ -166,8 +203,9 @@ def account_summary(price_lookup=None) -> dict:
     enriched = []
 
     for ticker, pos in positions.items():
-        qty = int(pos.get("quantity", 0))
-        avg = float(pos.get("avg_cost", 0))
+        pos = _normalize_position(pos)
+        qty = _position_quantity(pos)
+        avg = _position_avg_cost(pos)
         current = avg
         if price_lookup:
             try:
