@@ -24,7 +24,7 @@ def log_event(message: str) -> None:
     line = f"[{datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}] {message}\n"
     try:
         app_log_path().open("a", encoding="utf-8").write(line)
-    except Exception:
+    except OSError:
         pass
 
 
@@ -36,5 +36,5 @@ def log_error(context: str, exc: BaseException) -> None:
     )
     try:
         error_log_path().open("a", encoding="utf-8").write(text)
-    except Exception:
+    except OSError:
         pass
