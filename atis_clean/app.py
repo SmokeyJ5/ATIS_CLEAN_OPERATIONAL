@@ -80,7 +80,7 @@ class ATISClean(QMainWindow):
     def make_readonly(self, widget):
         try:
             widget.setReadOnly(True)
-        except Exception:
+        except AttributeError:
             pass
         return widget
 
