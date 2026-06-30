@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 import json
+from pathlib import Path
 from typing import Dict, List
+
+from atis_clean.core.paths import config_root
 
 
 DEFAULT_WORKSPACES = {
@@ -47,7 +49,7 @@ DEFAULT_WORKSPACES = {
 
 
 def workspace_root() -> Path:
-    path = Path.cwd() / "config" / "workspaces"
+    path = config_root() / "workspaces"
     path.mkdir(parents=True, exist_ok=True)
     return path
 

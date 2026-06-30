@@ -34,6 +34,9 @@ def check_module(name: str) -> dict:
         return {"module": name, "status": "FAIL", "message": f"{type(exc).__name__}: {exc}"}
 
 
+from atis_clean.core.paths import app_root, build_info_path
+
+
 def check_files() -> list[dict]:
     required = [
         "run_atis.py",
@@ -43,7 +46,7 @@ def check_files() -> list[dict]:
         "atis_clean/chart_widget.py",
     ]
     out = []
-    root = Path.cwd()
+    root = app_root()
     for item in required:
         exists = (root / item).exists()
         out.append({"module": item, "status": "PASS" if exists else "FAIL", "message": "Found" if exists else "Missing"})
@@ -90,7 +93,7 @@ def health_report() -> str:
 
 
 def version_info() -> str:
-    build = Path.cwd() / "BUILD_INFO.txt"
+    build = build_info_path()
     if build.exists():
         return build.read_text(encoding="utf-8", errors="ignore").strip()
     return "ATIS build info unavailable"

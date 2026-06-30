@@ -5,10 +5,12 @@ from pathlib import Path
 import csv
 from typing import Dict, List
 
+from atis_clean.core.paths import data_root
+
 HEADERS = ["date", "ticker", "strategy", "action", "entry", "exit", "shares", "stop", "target", "pnl", "r_multiple", "result", "notes"]
 
 def journal_path() -> Path:
-    data_dir = Path.cwd() / "data"
+    data_dir = data_root()
     data_dir.mkdir(exist_ok=True)
     return data_dir / "trade_journal.csv"
 

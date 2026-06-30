@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 from typing import Dict, List
+
+from atis_clean.core.paths import config_root
 
 
 DEFAULT_WATCHLISTS = {
@@ -15,7 +17,7 @@ DEFAULT_WATCHLISTS = {
 
 
 def watchlist_dir() -> Path:
-    path = Path.cwd() / "config" / "watchlists"
+    path = config_root() / "watchlists"
     path.mkdir(parents=True, exist_ok=True)
     return path
 

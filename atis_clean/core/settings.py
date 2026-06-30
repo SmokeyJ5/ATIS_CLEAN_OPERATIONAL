@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
+
+from atis_clean.core.paths import config_root
+from pathlib import Path
 
 
 DEFAULT_SETTINGS = {
@@ -15,9 +17,7 @@ DEFAULT_SETTINGS = {
 
 
 def settings_path() -> Path:
-    path = Path.cwd() / "config"
-    path.mkdir(exist_ok=True)
-    return path / "settings.json"
+    return config_root() / "settings.json"
 
 
 def load_settings() -> dict:

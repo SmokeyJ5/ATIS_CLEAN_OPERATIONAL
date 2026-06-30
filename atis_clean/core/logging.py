@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 import traceback
+
+from pathlib import Path
+
+from atis_clean.core.paths import logs_root
 
 
 def log_dir() -> Path:
-    path = Path.cwd() / "logs"
-    path.mkdir(exist_ok=True)
-    return path
+    return logs_root()
 
 
 def app_log_path() -> Path:
@@ -21,7 +22,10 @@ def error_log_path() -> Path:
 
 def log_event(message: str) -> None:
     line = f"[{datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}] {message}\n"
-    app_log_path().open("a", encoding="utf-8").write(line)
+    try:
+        app_log_path().open("a", encoding="utf-8").write(line)
+    except Exception:
+        pass
 
 
 def log_error(context: str, exc: BaseException) -> None:
@@ -30,4 +34,7 @@ def log_error(context: str, exc: BaseException) -> None:
         f"{type(exc).__name__}: {exc}\n"
         f"{traceback.format_exc()}\n"
     )
-    error_log_path().open("a", encoding="utf-8").write(text)
+    try:
+        error_log_path().open("a", encoding="utf-8").write(text)
+    except Exception:
+        pass

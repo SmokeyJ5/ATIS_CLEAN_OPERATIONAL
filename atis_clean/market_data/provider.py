@@ -98,8 +98,14 @@ class FallbackProvider:
         return output
 
 
+from atis_clean.core.logging import log_error
+
+
 class YFinanceProvider:
     name = "Yahoo Finance Live"
+
+    def __init__(self):
+        self.last_error = ""
 
     def available_symbols(self) -> List[str]:
         return []
@@ -116,15 +122,23 @@ class YFinanceProvider:
 
         symbol = (symbol or "").strip().upper()
         if not symbol:
+            self.last_error = "No symbol provided for live lookup."
             return None
 
         try:
             with ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(self._get_row_live_blocking, symbol)
-                return future.result(timeout=4)
+                row = future.result(timeout=4)
+                if row is None:
+                    self.last_error = self.last_error or f"Live lookup for {symbol} returned no data."
+                return row
         except TimeoutError:
+            self.last_error = f"Live lookup for {symbol} timed out after 4 seconds."
+            log_error("YFinanceProvider.get_row timeout", TimeoutError(f"{symbol} timed out"))
             return None
-        except Exception:
+        except Exception as exc:
+            self.last_error = f"Live lookup error for {symbol}: {exc}"
+            log_error("YFinanceProvider.get_row", exc)
             return None
 
     def _get_row_live_blocking(self, symbol: str) -> Optional[dict]:
@@ -134,13 +148,24 @@ class YFinanceProvider:
 
         try:
             import yfinance as yf
-        except Exception:
+        except Exception as exc:
+            self.last_error = (
+                "yfinance package is unavailable or failed to import. "
+                "Install yfinance and retry."
+            )
+            log_error("YFinanceProvider._get_row_live_blocking import yfinance", exc)
             return None
 
         try:
             stock = yf.Ticker(symbol)
-            hist = stock.history(period="5d", interval="5m", prepost=False).dropna()
+            hist = stock.history(period="5d", interval="5m", prepost=False)
+            if hist is None or hist.empty:
+                self.last_error = f"yfinance returned no historical data for {symbol}."
+                return None
+            hist = hist.dropna()
+
             if hist.empty:
+                self.last_error = f"yfinance returned only empty historical rows for {symbol}."
                 return None
 
             today = hist[hist.index.date == hist.index[-1].date()]
@@ -215,7 +240,9 @@ class YFinanceProvider:
                             "publisher": publisher or "News",
                             "link": link or "",
                         })
-            except Exception:
+            except Exception as exc:
+                self.last_error = f"News parsing failed for {symbol}: {exc}"
+                log_error("YFinanceProvider._get_row_live_blocking news parsing", exc)
                 news_items = []
 
             profile = {
@@ -244,6 +271,7 @@ class YFinanceProvider:
                 "business_summary": info.get("longBusinessSummary", "Live company summary unavailable."),
             }
 
+            self.last_error = ""
             row = {
                 "ticker": symbol,
                 "name": name,
@@ -276,7 +304,9 @@ class YFinanceProvider:
             row.update(decision(row))
             row["candles"] = self._candles_from_history(hist.tail(80), row)
             return row
-        except Exception:
+        except Exception as exc:
+            self.last_error = f"YFinance internal exception for {symbol}: {exc}"
+            log_error("YFinanceProvider._get_row_live_blocking", exc)
             return None
 
     def _candles_from_history(self, hist, row: dict) -> List[dict]:
@@ -300,7 +330,7 @@ class MarketDataEngine:
         self.mode = "fallback"
         self.fallback = FallbackProvider()
         self.live = YFinanceProvider()
-        self.last_error = ""
+        self.last_error = self.live.last_error
 
     def set_mode(self, mode: str) -> None:
         mode = (mode or "fallback").strip().lower()
@@ -329,9 +359,12 @@ class MarketDataEngine:
 
         if self.mode == "live":
             row = self.live.get_row(symbol)
+            self.last_error = self.live.last_error
             if row:
                 return row, ""
-            self.last_error = f"Live data unavailable for {symbol}; using fallback if available."
+            self.last_error = (
+                self.last_error or f"Live data unavailable for {symbol}; using fallback if available."
+            )
             if fallback_row:
                 fallback_row["data_source"] = "Fallback after live miss"
                 return fallback_row, ""
@@ -346,6 +379,7 @@ class MarketDataEngine:
 
         # All-symbol support: unknown fallback tickers automatically try live.
         row = self.live.get_row(symbol)
+        self.last_error = self.live.last_error
         if row:
             row["data_source"] = "Yahoo Finance Live Auto-Lookup"
             return row, ""

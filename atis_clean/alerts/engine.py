@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 import csv
+from pathlib import Path
 from typing import List
+
+from atis_clean.core.paths import data_root
 
 
 ALERT_HEADERS = ["time", "ticker", "alert", "level", "status", "message"]
 
 
 def alert_log_path() -> Path:
-    data_dir = Path.cwd() / "data"
+    data_dir = data_root()
     data_dir.mkdir(exist_ok=True)
     return data_dir / "alerts_log.csv"
 

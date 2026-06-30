@@ -1,8 +1,8 @@
 {
   "app": "ATIS Clean Operational",
-  "version": "v3.0.0-rc1",
-  "phase": "Phase 18 Production Release Candidate",
-  "build_time": "2026-06-29 05:27:07 PM",
+  "version": "v3.0.0-STABLE",
+  "phase": "v3.0 Stable Certified Baseline",
+  "build_time": "2026-06-30 10:40:46 AM",
   "core_features": [
     "Single global search",
     "Fallback/live market data architecture",

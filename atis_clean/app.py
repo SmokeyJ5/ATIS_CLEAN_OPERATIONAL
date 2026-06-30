@@ -61,10 +61,13 @@ class ATISClean(QMainWindow):
         self.selected = None
         self.syncing = False
         self.scanner_results = []
+        self.settings = load_settings()
         ensure_default_workspaces()
         ensure_default_watchlists()
         self.build()
-        self.load_symbol("NVDA")
+        self.data_mode.setCurrentText(self.settings.get("data_mode", "Fallback"))
+        default_symbol = self.settings.get("default_symbol", "TSLA")
+        self.load_symbol(default_symbol)
 
     def panel(self, title):
         frame = QFrame()

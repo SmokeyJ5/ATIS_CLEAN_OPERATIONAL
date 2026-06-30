@@ -6,13 +6,15 @@ import csv
 import json
 from typing import Dict, List
 
+from atis_clean.core.paths import data_root
+
 
 STARTING_CASH = 100000.0
 ORDER_HEADERS = ["time", "ticker", "side", "quantity", "price", "value", "status", "notes"]
 
 
 def data_dir() -> Path:
-    path = Path.cwd() / "data"
+    path = data_root()
     path.mkdir(exist_ok=True)
     return path
 

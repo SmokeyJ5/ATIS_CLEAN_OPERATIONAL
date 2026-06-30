@@ -64,7 +64,10 @@ def manifest_text() -> str:
     return "\n".join(lines)
 
 
+from atis_clean.core.paths import release_manifest_path
+
+
 def write_manifest_file() -> Path:
-    path = Path.cwd() / "RELEASE_MANIFEST.json"
+    path = release_manifest_path()
     path.write_text(json.dumps(manifest(), indent=2), encoding="utf-8")
     return path
