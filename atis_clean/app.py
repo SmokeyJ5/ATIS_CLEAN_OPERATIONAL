@@ -17,7 +17,7 @@ from atis_clean.alerts.engine import evaluate_alerts, alerts_report, log_alert, 
 from atis_clean.market_intelligence.engine import dashboard_report, metals_report, calendar_report, news_report, ai_market_briefing, economic_calendar, metals_intelligence
 from atis_clean.workspace.layouts import layout_names, layout_count, default_symbol, default_timeframe
 from atis_clean.workspace.manager import list_workspaces, load_workspace, save_workspace, workspace_report, ensure_default_workspaces
-from atis_clean.paper_trading.simulator import buy as paper_buy, sell as paper_sell, account_summary, account_report, load_orders, reset_account
+from atis_clean.paper_trading.simulator import buy as paper_buy, sell as paper_sell, account_summary, account_report, load_orders, reset_account, starting_cash
 from atis_clean.strategy_lab.backtester import strategy_names, backtest
 from atis_clean.command_center.metrics import top_opportunities, command_center_report, heatmap_rows
 from atis_clean.diagnostics.health import health_report, version_info, system_health
@@ -1130,7 +1130,8 @@ class ATISClean(QMainWindow):
             trade["result"] = "Filled"
             trade["notes"] = notes
             trade["strategy"] = trade.get("strategy", "Paper Trade")
-            trade["pnl"] = trade.get("pnl", "")
+            trade["pnl"] = ""
+            trade["r_multiple"] = ""
             append_trade(trade)
             if hasattr(self, "journal_table"):
                 self.refresh_journal_tab()
@@ -1148,7 +1149,7 @@ class ATISClean(QMainWindow):
     def reset_paper_account(self):
         reset_account()
         self.refresh_paper_trading_tab()
-        self.status.setText("Paper account reset to $100,000.")
+        self.status.setText(f"Paper account reset to ${starting_cash():,.0f}.")
 
     def refresh_paper_trading_tab(self):
         if not hasattr(self, "paper_account_text"):

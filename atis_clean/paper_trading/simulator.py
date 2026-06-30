@@ -103,7 +103,9 @@ def load_orders() -> List[dict]:
 def reset_account() -> dict:
     account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
     save_account(account)
-    ensure_orders_log()
+    path = orders_path()
+    with path.open("w", newline="", encoding="utf-8") as f:
+        csv.DictWriter(f, fieldnames=ORDER_HEADERS).writeheader()
     return account
 
 
