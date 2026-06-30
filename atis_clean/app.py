@@ -2166,9 +2166,6 @@ BUSINESS SUMMARY:
                     table.selectRow(r)
             table.blockSignals(False)
 
-        if hasattr(self, "scanner"):
-            self.run_professional_scanner()
-
     def table_selected(self):
         table = self.sender()
         r = table.currentRow()
@@ -2206,6 +2203,8 @@ BUSINESS SUMMARY:
         self.update_additional_tabs(row)
         if hasattr(self, "command_market_text"):
             self.update_command_center(row)
+        if hasattr(self, "scanner"):
+            self.run_professional_scanner()
         if hasattr(self, "watchlist_report_text"):
             self.refresh_watchlists()
         if hasattr(self, "event_bus_text"):
