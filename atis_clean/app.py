@@ -1121,6 +1121,18 @@ class ATISClean(QMainWindow):
         else:
             result = paper_sell(ticker, qty, price, notes)
 
+        if result.get("status") == "FILLED":
+            trade = planned_trade_from_row(self.selected)
+            trade["action"] = side
+            trade["shares"] = qty
+            trade["entry"] = price if side == "BUY" else trade.get("entry", price)
+            trade["exit"] = price if side == "SELL" else ""
+            trade["result"] = "Filled"
+            trade["notes"] = notes
+            append_trade(trade)
+            if hasattr(self, "journal_table"):
+                self.refresh_journal_tab()
+
         self.refresh_paper_trading_tab()
         self.status.setText(result.get("message", result.get("status", "Order processed.")))
 
