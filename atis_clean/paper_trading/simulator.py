@@ -216,7 +216,8 @@ def account_summary(price_lookup=None) -> dict:
         current = avg
         if price_lookup:
             try:
-                current = float(price_lookup(ticker) or avg)
+                lookup_price = price_lookup(ticker)
+                current = float(lookup_price) if lookup_price not in (None, "") else avg
             except Exception:
                 current = avg
         value = qty * current
