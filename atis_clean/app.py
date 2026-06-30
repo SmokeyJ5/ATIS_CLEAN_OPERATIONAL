@@ -1086,8 +1086,8 @@ class ATISClean(QMainWindow):
 
         right, rl = self.panel("Execution Log")
         self.paper_orders_table = QTableWidget()
-        self.paper_orders_table.setColumnCount(7)
-        self.paper_orders_table.setHorizontalHeaderLabels(["Time", "Ticker", "Side", "Qty", "Price", "Value", "Status"])
+        self.paper_orders_table.setColumnCount(8)
+        self.paper_orders_table.setHorizontalHeaderLabels(["Time", "Ticker", "Side", "Qty", "Price", "Value", "Status", "Notes"])
         self.paper_orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         rl.addWidget(self.paper_orders_table)
 

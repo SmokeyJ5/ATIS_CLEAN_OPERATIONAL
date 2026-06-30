@@ -9,3 +9,5 @@ date,ticker,strategy,action,entry,exit,shares,stop,target,pnl,r_multiple,result,
 2026-06-30,TSLA,Paper Trade,SELL,244.8,244.8,10,237.46,253.37,857.0,1.17,Filled,BUY WATCH
 2026-06-30,AAPL,Paper Trade,SELL,213.1,213.1,10,210.2,220.56,746.0,2.57,Filled,WATCH
 2026-06-30,NVDA,Paper Trade,SELL,128.5,128.5,10,124.64,133.0,450.0,1.17,Filled,WATCH
+2026-06-30,PAAS,Paper Trade,BUY,44.68,,100,43.73,46.24,156.0,1.64,Filled,AVOID
+2026-06-30,GDX,Paper Trade,BUY,39.4,,500,38.8,40.78,138.0,2.3,Filled,WATCH
