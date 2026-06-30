@@ -1172,7 +1172,7 @@ class ATISClean(QMainWindow):
             vals = [
                 order.get("time", ""), order.get("ticker", ""), order.get("side", ""),
                 order.get("quantity", ""), order.get("price", ""), order.get("value", ""),
-                order.get("status", "")
+                order.get("status", ""), order.get("notes", "")
             ]
             for c, v in enumerate(vals):
                 item = QTableWidgetItem(str(v))
