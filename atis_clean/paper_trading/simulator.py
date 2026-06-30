@@ -194,7 +194,12 @@ def sell(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
         "notes": notes or f"Realized P/L ${realized}",
     }
     log_order(order)
-    return {"status": "FILLED", "message": f"Sold {quantity} {ticker} @ ${price}; P/L ${realized}", "order": order}
+    return {
+        "status": "FILLED",
+        "message": f"Sold {quantity} {ticker} @ ${price}; P/L ${realized}",
+        "order": order,
+        "realized_pnl": realized,
+    }
 
 
 def account_summary(price_lookup=None) -> dict:

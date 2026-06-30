@@ -1130,7 +1130,10 @@ class ATISClean(QMainWindow):
             trade["result"] = "Filled"
             trade["notes"] = notes
             trade["strategy"] = trade.get("strategy", "Paper Trade")
-            trade["pnl"] = ""
+            if side == "SELL":
+                trade["pnl"] = result.get("realized_pnl", "")
+            else:
+                trade["pnl"] = ""
             trade["r_multiple"] = ""
             append_trade(trade)
             if hasattr(self, "journal_table"):
