@@ -2198,6 +2198,11 @@ BUSINESS SUMMARY:
         self.ai_plan.setPlainText(self.trade_plan(row))
         self.chart.set_row(row)
         self.chart_info.setPlainText(self.chart_report(row))
+        if hasattr(self, "strategy_report_text"):
+            self.strategy_report_text.setPlainText(
+                f"Strategy Lab ready for {row['ticker']}.\n\n"
+                "Choose a strategy and click Run Backtest to evaluate the current symbol."
+            )
         self.update_additional_tabs(row)
         if hasattr(self, "command_market_text"):
             self.update_command_center(row)

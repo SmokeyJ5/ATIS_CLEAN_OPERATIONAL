@@ -4,3 +4,15 @@ time,ticker,alert,level,status,message
 2026-06-29 05:45:03 PM,TSLA,Volume Spike,3.4x,ACTIVE,Relative volume is above 3x.
 2026-06-29 05:45:03 PM,TSLA,New Intraday High,247.2,ACTIVE,Symbol is making/testing intraday high.
 2026-06-29 05:45:03 PM,TSLA,Catalyst Flag,News,ACTIVE,News/catalyst flag is active.
+2026-06-30 02:23:52 PM,AMD,VWAP Reclaim,566.4,ACTIVE,AMD is above VWAP.
+2026-06-30 02:23:52 PM,AMD,Momentum Surge,7.4%,ACTIVE,Strong positive momentum.
+2026-06-30 02:23:52 PM,AMD,Catalyst Flag,News,ACTIVE,News/catalyst flag is active.
+2026-06-30 02:24:00 PM,AMD,VWAP Reclaim,566.4,ACTIVE,AMD is above VWAP.
+2026-06-30 02:24:00 PM,AMD,Momentum Surge,7.4%,ACTIVE,Strong positive momentum.
+2026-06-30 02:24:00 PM,AMD,Catalyst Flag,News,ACTIVE,News/catalyst flag is active.
+2026-06-30 02:24:01 PM,AMD,VWAP Reclaim,566.4,ACTIVE,AMD is above VWAP.
+2026-06-30 02:24:01 PM,AMD,Momentum Surge,7.4%,ACTIVE,Strong positive momentum.
+2026-06-30 02:24:01 PM,AMD,Catalyst Flag,News,ACTIVE,News/catalyst flag is active.
+2026-06-30 02:24:02 PM,AMD,VWAP Reclaim,566.4,ACTIVE,AMD is above VWAP.
+2026-06-30 02:24:02 PM,AMD,Momentum Surge,7.4%,ACTIVE,Strong positive momentum.
+2026-06-30 02:24:02 PM,AMD,Catalyst Flag,News,ACTIVE,News/catalyst flag is active.
