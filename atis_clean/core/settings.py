@@ -30,7 +30,7 @@ def load_settings() -> dict:
         merged = dict(DEFAULT_SETTINGS)
         merged.update(data)
         return merged
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return dict(DEFAULT_SETTINGS)
 
 
