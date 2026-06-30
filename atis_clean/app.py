@@ -1167,8 +1167,9 @@ class ATISClean(QMainWindow):
                 self.paper_positions_table.setItem(r, c, item)
 
         orders = load_orders()
-        self.paper_orders_table.setRowCount(len(orders))
-        for r, order in enumerate(orders[-100:]):
+        recent_orders = orders[-100:]
+        self.paper_orders_table.setRowCount(len(recent_orders))
+        for r, order in enumerate(recent_orders):
             vals = [
                 order.get("time", ""), order.get("ticker", ""), order.get("side", ""),
                 order.get("quantity", ""), order.get("price", ""), order.get("value", ""),
