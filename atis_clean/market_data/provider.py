@@ -355,8 +355,6 @@ class MarketDataEngine:
         if not symbol:
             return None, "Enter a ticker."
 
-        fallback_row = self.fallback.get_row(symbol)
-
         if self.mode == "live":
             row = self.live.get_row(symbol)
             self.last_error = self.live.last_error
@@ -365,6 +363,7 @@ class MarketDataEngine:
             self.last_error = (
                 self.last_error or f"Live data unavailable for {symbol}; using fallback if available."
             )
+            fallback_row = self.fallback.get_row(symbol)
             if fallback_row:
                 fallback_row["data_source"] = "Fallback after live miss"
                 return fallback_row, ""
@@ -374,6 +373,7 @@ class MarketDataEngine:
             )
 
         # Fallback mode: use instant fallback rows first.
+        fallback_row = self.fallback.get_row(symbol)
         if fallback_row:
             return fallback_row, ""
 

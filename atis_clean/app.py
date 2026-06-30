@@ -2135,7 +2135,8 @@ BUSINESS SUMMARY:
             self.status.setText(error)
             return
 
-        self.rows = market_data_engine.all_rows()
+        if not self.rows:
+            self.rows = market_data_engine.all_rows()
         self.selected = row
         # Keep searched row available even if it is not in fallback watchlist.
         if not any(r["ticker"] == row["ticker"] for r in self.rows):
