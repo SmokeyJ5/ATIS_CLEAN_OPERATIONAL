@@ -2197,7 +2197,6 @@ BUSINESS SUMMARY:
         self.ai_reasoning.setPlainText(self.ai_report(row))
         self.ai_plan.setPlainText(self.trade_plan(row))
         self.chart.set_row(row)
-        self.update_chart_controls()
         self.chart_info.setPlainText(self.chart_report(row))
         self.update_additional_tabs(row)
         if hasattr(self, "command_market_text"):
