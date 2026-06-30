@@ -2080,8 +2080,6 @@ BUSINESS SUMMARY:
         Search / Load or Enter.
         """
         set_data_mode(mode)
-        self.rows = market_data_engine.all_rows()
-        self.update_tables()
         if hasattr(self, "data_text"):
             self.data_text.setPlainText(market_diagnostics())
         self.status.setText(
