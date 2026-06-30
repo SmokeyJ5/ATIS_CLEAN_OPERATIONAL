@@ -1132,6 +1132,11 @@ class ATISClean(QMainWindow):
             append_trade(trade)
             if hasattr(self, "journal_table"):
                 self.refresh_journal_tab()
+            if self.selected:
+                if hasattr(self, "command_ops_text"):
+                    self.update_command_center(self.selected)
+                if hasattr(self, "portfolio_table"):
+                    self.update_portfolio_tab(self.selected)
 
         self.refresh_paper_trading_tab()
         self.status.setText(result.get("message", result.get("status", "Order processed.")))
