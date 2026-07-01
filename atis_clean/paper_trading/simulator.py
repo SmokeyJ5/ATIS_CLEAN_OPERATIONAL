@@ -110,9 +110,16 @@ def reset_account() -> dict:
 
 
 def buy(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
-    ticker = ticker.upper()
-    quantity = int(quantity)
-    price = float(price)
+    ticker = (ticker or "").upper()
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return {"status": "REJECTED", "message": "Quantity must be a valid integer."}
+    try:
+        price = float(price)
+    except (TypeError, ValueError):
+        return {"status": "REJECTED", "message": "Price must be a valid number."}
+
     account = ensure_account()
     value = round(quantity * price, 2)
 
@@ -143,9 +150,16 @@ def buy(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
 
 
 def sell(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
-    ticker = ticker.upper()
-    quantity = int(quantity)
-    price = float(price)
+    ticker = (ticker or "").upper()
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return {"status": "REJECTED", "message": "Quantity must be a valid integer."}
+    try:
+        price = float(price)
+    except (TypeError, ValueError):
+        return {"status": "REJECTED", "message": "Price must be a valid number."}
+
     account = ensure_account()
     positions = account.get("positions", {})
     pos = positions.get(ticker)

@@ -21,10 +21,17 @@ def ensure_journal_file() -> Path:
             csv.DictWriter(f, fieldnames=HEADERS).writeheader()
     return path
 
+def _coerce_float(value, default=0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def planned_trade_from_row(row: dict, strategy: str = "Paper Trade") -> dict:
-    entry = float(row.get("entry", row.get("price", 0)) or 0)
-    stop = float(row.get("stop", 0) or 0)
-    target = float(row.get("target1", 0) or 0)
+    entry = _coerce_float(row.get("entry", row.get("price", 0)), 0)
+    stop = _coerce_float(row.get("stop", 0), 0)
+    target = _coerce_float(row.get("target1", 0), 0)
     shares = 100
     risk_per_share = max(entry - stop, 0.01)
     reward = max(target - entry, 0)

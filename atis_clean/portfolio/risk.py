@@ -8,12 +8,19 @@ DEFAULT_CAPITAL = 20000.0
 DEFAULT_RISK_PCT = 1.0
 
 
+def _coerce_float(value, default=0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def position_size(row: dict, capital: float = DEFAULT_CAPITAL, risk_pct: float = DEFAULT_RISK_PCT) -> dict:
-    price = float(row.get("price", 0) or 0)
-    entry = float(row.get("entry", price) or price)
-    stop = float(row.get("stop", 0) or 0)
-    target1 = float(row.get("target1", 0) or 0)
-    target2 = float(row.get("target2", 0) or 0)
+    price = _coerce_float(row.get("price", 0), 0)
+    entry = _coerce_float(row.get("entry", price), price)
+    stop = _coerce_float(row.get("stop", 0), 0)
+    target1 = _coerce_float(row.get("target1", 0), 0)
+    target2 = _coerce_float(row.get("target2", 0), 0)
 
     risk_budget = capital * (risk_pct / 100)
     risk_per_share = max(entry - stop, 0.01)

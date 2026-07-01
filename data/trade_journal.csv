@@ -17,3 +17,10 @@ date,ticker,strategy,action,entry,exit,shares,stop,target,pnl,r_multiple,result,
 2026-07-01,GDX,Paper Trade,BUY,75.42,,100,73.89,78.06,,,Filled,WAIT
 2026-07-01,GDX,Paper Trade,BUY,75.42,,100,73.89,78.06,,,Filled,WAIT
 2026-07-01,GDX,Paper Trade,BUY,75.42,,100,73.89,78.06,,,Filled,WAIT
+2026-07-01,AEM,Paper Trade,BUY,159.34,,100,154.56,164.92,,,Filled,WATCH
+2026-07-01,SLV,Paper Trade,BUY,54.85,,100,53.22,56.77,,,Filled,WATCH
+2026-07-01,GDX,Paper Trade,BUY,77.47,,100,75.15,80.18,,,Filled,WATCH
+2026-07-01,PAAS,Paper Trade,BUY,46.06,,100,44.68,47.67,,,Filled,WATCH
+2026-07-01,PAAS,Paper Trade,BUY,46.06,,100,44.68,47.67,,,Filled,WATCH
+2026-07-01,SIL,Paper Trade,BUY,79.65,,100,77.26,82.44,,,Filled,WATCH
+2026-07-01,SILJ,Paper Trade,BUY,26.71,,100,25.91,27.64,,,Filled,WATCH

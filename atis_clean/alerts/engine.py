@@ -39,16 +39,23 @@ def load_alerts() -> List[dict]:
         return list(csv.DictReader(f))
 
 
+def _coerce_float(value, default=0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def evaluate_alerts(row: dict) -> List[dict]:
     ticker = row.get("ticker", "")
-    price = float(row.get("price", 0) or 0)
-    vwap = float(row.get("vwap", 0) or 0)
-    ema9 = float(row.get("ema9", 0) or 0)
-    ema20 = float(row.get("ema20", 0) or 0)
-    rvol = float(row.get("relative_volume", 0) or 0)
-    change = float(row.get("change_pct", 0) or 0)
-    ai = row.get("ai_decision", {})
-    ai_score = int(ai.get("ai_score", row.get("score", 0)) or 0)
+    price = _coerce_float(row.get("price", 0), 0)
+    vwap = _coerce_float(row.get("vwap", 0), 0)
+    ema9 = _coerce_float(row.get("ema9", 0), 0)
+    ema20 = _coerce_float(row.get("ema20", 0), 0)
+    rvol = _coerce_float(row.get("relative_volume", 0), 0)
+    change = _coerce_float(row.get("change_pct", 0), 0)
+    ai = row.get("ai_decision", {}) if isinstance(row.get("ai_decision", {}), dict) else {}
+    ai_score = int(_coerce_float(ai.get("ai_score", row.get("score", 0)), 0))
 
     now = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
     alerts = []

@@ -26,8 +26,40 @@ def test_fallback_candles_span_price():
     assert last_candle["low"] <= stable_row["price"]
 
 
+def test_ai_decision_aliases_and_scanner_compatibility():
+    row = make_row("TSLA")
+    ai = build_ai_decision(row)
+    assert ai["score"] == ai["ai_score"]
+    assert ai["action"] == ai["ai_action"]
+
+    ai_like_row = {
+        "ticker": "TSLA",
+        "ai_score": 100,
+        "ai_action": "BUY WATCH",
+        "change_pct": 5.0,
+        "relative_volume": 3.0,
+        "above_vwap": True,
+        "above_9ema": True,
+        "above_20ema": True,
+        "news": False,
+        "new_intraday_high": True,
+    }
+    matches = scan_rows([ai_like_row], preset="All")
+    assert matches and matches[0]["scanner_preset"] == "All"
+
+
+def test_paper_trading_rejects_bad_inputs():
+    reset_account()
+    assert buy("TSLA", 0, 100)["status"] == "REJECTED"
+    assert buy("TSLA", 1, None)["status"] == "REJECTED"
+    assert sell("TSLA", 0, 100)["status"] == "REJECTED"
+    assert sell("TSLA", 1, None)["status"] == "REJECTED"
+
+
 def main():
     test_fallback_candles_span_price()
+    test_ai_decision_aliases_and_scanner_compatibility()
+    test_paper_trading_rejects_bad_inputs()
     rows = market_data_engine.all_rows()
     assert rows, "market rows missing"
 

@@ -155,6 +155,15 @@ def build_ai_decision(row: dict) -> dict:
     action = action_from_score(score, row)
     confidence = confidence_from_score(score)
 
+    decision = {
+        "ai_score": score,
+        "ai_action": action,
+        "ai_confidence": confidence,
+        "score": score,
+        "action": action,
+        "confidence": confidence,
+    }
+
     entry = row.get("entry", row.get("price", 0))
     stop = row.get("stop", 0)
     target1 = row.get("target1", 0)
@@ -170,10 +179,7 @@ def build_ai_decision(row: dict) -> dict:
         else:
             positives.append(note)
 
-    return {
-        "ai_score": score,
-        "ai_action": action,
-        "ai_confidence": confidence,
+    decision.update({
         "entry_zone": f"${entry}",
         "stop_level": f"${stop}",
         "target_zone": f"${target1} - ${target2}",
@@ -186,7 +192,8 @@ def build_ai_decision(row: dict) -> dict:
         "warnings": warnings,
         "summary": build_ai_summary(row, score, action, confidence, positives, warnings),
         "trade_plan": build_trade_plan(row, score, action, confidence, risk),
-    }
+    })
+    return decision
 
 
 def build_ai_summary(row: dict, score: int, action: str, confidence: str, positives: List[str], warnings: List[str]) -> str:
