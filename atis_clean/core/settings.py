@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from atis_clean.core.paths import config_root
+from atis_clean.core.paths import atomic_write_text, config_root
 
 
 DEFAULT_SETTINGS = {
@@ -38,7 +38,7 @@ def save_settings(settings: dict) -> Path:
     payload = dict(DEFAULT_SETTINGS)
     payload.update(settings or {})
     path = settings_path()
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    atomic_write_text(path, json.dumps(payload, indent=2), encoding="utf-8")
     return path
 
 

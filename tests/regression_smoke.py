@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import sys
+import tempfile
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -8,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from atis_clean.core.paths import atomic_write_text
 from atis_clean.market_data.provider import FallbackProvider, market_data_engine
 from atis_clean.decision.engine import build_ai_decision
 from atis_clean.scanner.engine import scan_rows
@@ -59,6 +61,30 @@ def test_paper_trading_rejects_bad_inputs():
     assert sell("TSLA", 1, None)["status"] == "REJECTED"
 
 
+def test_atomic_write_preserves_existing_file_on_failure():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target = Path(tmp_dir) / "state.json"
+        target.write_text("old", encoding="utf-8")
+
+        import atis_clean.core.paths as paths
+        original_replace = paths.os.replace
+
+        def failing_replace(source, destination):
+            raise OSError("simulated replace failure")
+
+        paths.os.replace = failing_replace
+        try:
+            try:
+                atomic_write_text(target, "new")
+                assert False, "expected atomic write to fail"
+            except OSError:
+                pass
+        finally:
+            paths.os.replace = original_replace
+
+        assert target.read_text(encoding="utf-8") == "old"
+
+
 def test_app_starts_when_a_tab_builder_fails():
     from PySide6.QtWidgets import QApplication
     from atis_clean.app import ATISClean
@@ -83,6 +109,7 @@ def main():
     test_fallback_candles_span_price()
     test_ai_decision_aliases_and_scanner_compatibility()
     test_paper_trading_rejects_bad_inputs()
+    test_atomic_write_preserves_existing_file_on_failure()
     test_app_starts_when_a_tab_builder_fails()
     rows = market_data_engine.all_rows()
     assert rows, "market rows missing"

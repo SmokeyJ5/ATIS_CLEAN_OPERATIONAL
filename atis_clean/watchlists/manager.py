@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
-from atis_clean.core.paths import config_root
+from atis_clean.core.paths import atomic_write_text, config_root
 
 
 DEFAULT_WATCHLISTS = {
@@ -41,7 +41,7 @@ def save_watchlist(name: str, symbols: List[str]) -> Path:
     symbols = [s.strip().upper() for s in symbols if s and s.strip()]
     payload = {"name": name, "symbols": sorted(set(symbols))}
     path = watchlist_path(name)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    atomic_write_text(path, json.dumps(payload, indent=2), encoding="utf-8")
     return path
 
 

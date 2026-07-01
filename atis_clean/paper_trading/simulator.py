@@ -3,10 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import csv
+import io
 import json
 from typing import Dict, List
 
-from atis_clean.core.paths import data_root
+from atis_clean.core.paths import atomic_write_text, data_root
 from atis_clean.core.settings import load_settings
 
 
@@ -77,14 +78,16 @@ def ensure_account() -> dict:
 
 
 def save_account(account: dict) -> None:
-    account_path().write_text(json.dumps(account, indent=2), encoding="utf-8")
+    atomic_write_text(account_path(), json.dumps(account, indent=2), encoding="utf-8")
 
 
 def ensure_orders_log() -> Path:
     path = orders_path()
     if not path.exists():
-        with path.open("w", newline="", encoding="utf-8") as f:
-            csv.DictWriter(f, fieldnames=ORDER_HEADERS).writeheader()
+        buffer = io.StringIO()
+        writer = csv.DictWriter(buffer, fieldnames=ORDER_HEADERS)
+        writer.writeheader()
+        atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
     return path
 
 
@@ -104,8 +107,10 @@ def reset_account() -> dict:
     account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
     save_account(account)
     path = orders_path()
-    with path.open("w", newline="", encoding="utf-8") as f:
-        csv.DictWriter(f, fieldnames=ORDER_HEADERS).writeheader()
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=ORDER_HEADERS)
+    writer.writeheader()
+    atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
     return account
 
 

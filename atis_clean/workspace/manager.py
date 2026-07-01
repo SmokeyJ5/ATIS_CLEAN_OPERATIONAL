@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
-from atis_clean.core.paths import config_root
+from atis_clean.core.paths import atomic_write_text, config_root
 
 
 DEFAULT_WORKSPACES = {
@@ -71,8 +71,7 @@ def save_workspace(name: str, data: dict) -> Path:
     payload["workspace_name"] = name
     payload["saved_at"] = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
     path = workspace_file(name)
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+    atomic_write_text(path, json.dumps(payload, indent=2), encoding="utf-8")
     return path
 
 

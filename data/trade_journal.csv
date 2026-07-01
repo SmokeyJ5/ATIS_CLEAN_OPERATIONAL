@@ -27,3 +27,6 @@ date,ticker,strategy,action,entry,exit,shares,stop,target,pnl,r_multiple,result,
 2026-07-01,COLA,Paper Trade,BUY,10.65,,100,10.64,11.02,,,Filled,AVOID
 2026-07-01,PEP,Paper Trade,BUY,139.77,,100,136.61,144.66,,,Filled,WATCH
 2026-07-01,SCCO,Paper Trade,BUY,171.33,,100,169.2,177.33,,,Filled,WAIT
+2026-07-01,GDX,Paper Trade,BUY,76.67,,100,75.14,79.35,,,Filled,AVOID
+2026-07-01,SLV,Paper Trade,BUY,54.42,,100,53.22,56.32,,,Filled,WAIT
+2026-07-01,SCCO,Paper Trade,BUY,171.46,,100,169.2,177.46,,,Filled,WAIT
