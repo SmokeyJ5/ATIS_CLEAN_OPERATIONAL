@@ -5,16 +5,29 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atis_clean.market_data.provider import market_data_engine
+from atis_clean.market_data.provider import FallbackProvider, market_data_engine
 from atis_clean.decision.engine import build_ai_decision
 from atis_clean.scanner.engine import scan_rows
 from atis_clean.alerts.engine import evaluate_alerts
 from atis_clean.strategy_lab.backtester import backtest
 from atis_clean.paper_trading.simulator import reset_account, buy, sell
 from atis_clean.diagnostics.health import system_health
+from atis_clean.data import make_row
+
+
+def test_fallback_candles_span_price():
+    fallback_row = FallbackProvider().get_row("TSLA")
+    stable_row = make_row("TSLA")
+    assert fallback_row, "fallback row missing"
+    assert stable_row, "stable row missing"
+    last_candle = fallback_row["candles"][-1]
+    assert last_candle["close"] == stable_row["price"]
+    assert last_candle["high"] >= stable_row["price"]
+    assert last_candle["low"] <= stable_row["price"]
 
 
 def main():
+    test_fallback_candles_span_price()
     rows = market_data_engine.all_rows()
     assert rows, "market rows missing"
 

@@ -1,6 +1,33 @@
 from dataclasses import dataclass
 from math import sin
 
+
+def _build_candles_from_row(row, count=70, last_price=None):
+    low = row["day_low"]
+    high = row["day_high"]
+    price = row["price"] if last_price is None else last_price
+    span = max(high - low, 0.01)
+    output = []
+    previous = low
+    for i in range(count):
+        progress = i / max(count - 1, 1)
+        base = low + (price - low) * progress
+        wave = sin(i / 4) * span * 0.08
+        close = max(min(base + wave, high * 1.01), low * 0.99)
+        open_ = previous
+        candle_high = max(open_, close) + span * 0.04
+        candle_low = min(open_, close) - span * 0.04
+        output.append({
+            "open": round(open_, 2),
+            "high": round(candle_high, 2),
+            "low": round(candle_low, 2),
+            "close": round(close, 2),
+            "volume": int(row["volume"] / count),
+        })
+        previous = close
+    output[-1]["close"] = price
+    return output
+
 SAMPLE = {
     "NVDA": ("NVIDIA", 128.50, 129.40, 124.20, 126.70, 127.60, 126.10, 2.85, 2.9, 61200000, True, False),
     "TSLA": ("Tesla", 244.80, 247.20, 236.50, 241.30, 243.60, 239.90, 3.65, 3.4, 88900000, True, True),
@@ -123,30 +150,7 @@ def decision(row):
     }
 
 def candles(row, count=70):
-    low = row["day_low"]
-    high = row["day_high"]
-    price = row["price"]
-    span = max(high - low, 0.01)
-    output = []
-    previous = low
-    for i in range(count):
-        progress = i / max(count - 1, 1)
-        base = low + (price - low) * progress
-        wave = sin(i / 4) * span * 0.08
-        close = max(min(base + wave, high * 1.01), low * 0.99)
-        open_ = previous
-        candle_high = max(open_, close) + span * 0.04
-        candle_low = min(open_, close) - span * 0.04
-        output.append({
-            "open": round(open_, 2),
-            "high": round(candle_high, 2),
-            "low": round(candle_low, 2),
-            "close": round(close, 2),
-            "volume": int(row["volume"] / count),
-        })
-        previous = close
-    output[-1]["close"] = price
-    return output
+    return _build_candles_from_row(row, count=count)
 
 def all_rows():
     rows = [make_row(symbol) for symbol in SAMPLE]

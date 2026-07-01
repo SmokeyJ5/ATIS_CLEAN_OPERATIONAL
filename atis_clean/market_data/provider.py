@@ -5,7 +5,7 @@ from datetime import datetime
 from math import sin
 from typing import Dict, List, Optional, Tuple
 
-from atis_clean.data import SAMPLE, decision
+from atis_clean.data import SAMPLE, _build_candles_from_row, decision
 
 
 @dataclass
@@ -68,33 +68,9 @@ class FallbackProvider:
         if not row:
             return []
 
-        low = row["day_low"]
-        high = row["day_high"]
-        price = row["price"]
-        span = max(high - low, 0.01)
-        output = []
-        previous = low
-
-        for i in range(count):
-            progress = i / max(count - 1, 1)
-            base = low + (price - low) * progress
-            wave = sin(i / 4) * span * 0.08
-            close = max(min(base + wave, high * 1.01), low * 0.99)
-            open_ = previous
-            candle_high = max(open_, close) + span * 0.04
-            candle_low = min(open_, close) - span * 0.04
-            output.append({
-                "open": round(open_, 2),
-                "high": round(candle_high, 2),
-                "low": round(candle_low, 2),
-                "close": round(close, 2),
-                "volume": int(row["volume"] / count),
-            })
-            previous = close
-
-        output[-1]["close"] = price
-        output[-1]["high"] = max(output[-1]["high"], price)
-        output[-1]["low"] = min(output[-1]["low"], price)
+        output = _build_candles_from_row(row, count=count)
+        output[-1]["high"] = max(output[-1]["high"], row["price"])
+        output[-1]["low"] = min(output[-1]["low"], row["price"])
         return output
 
 

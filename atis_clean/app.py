@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QTextEdit, QFrame, QHeaderView
 )
 
-from atis_clean.data import make_row, all_rows, SAMPLE, set_data_mode, get_data_mode, market_diagnostics
+from atis_clean.data import set_data_mode, get_data_mode, market_diagnostics
 from atis_clean.market_data.provider import market_data_engine
 from atis_clean.scanner.engine import preset_names, scan_rows, scanner_report
 from atis_clean.decision.engine import build_ai_decision
@@ -26,8 +26,8 @@ from atis_clean.plugins.broker import disabled_live_broker, BrokerOrder
 from atis_clean.watchlists.manager import ensure_default_watchlists, list_watchlists, load_watchlist, add_symbol, remove_symbol, watchlist_report
 from atis_clean.workstation.architecture import architecture_report
 from atis_clean.release.manifest import manifest_text, VERSION
-from atis_clean.core.settings import settings_report, load_settings, save_settings
-from atis_clean.core.logging import log_event, log_error
+from atis_clean.core.settings import settings_report, load_settings
+from atis_clean.core.logging import log_event
 from atis_clean.core.events import event_bus, SYMBOL_SELECTED, WATCHLIST_CHANGED
 from atis_clean.chart_widget import ChartWidget
 
@@ -187,7 +187,7 @@ class ATISClean(QMainWindow):
     def apply_responsive_widget_policy(self, widget):
         try:
             widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        except Exception:
+        except AttributeError:
             pass
         return widget
 
