@@ -1,5 +1,8 @@
+import os
 from pathlib import Path
 import sys
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -56,10 +59,31 @@ def test_paper_trading_rejects_bad_inputs():
     assert sell("TSLA", 1, None)["status"] == "REJECTED"
 
 
+def test_app_starts_when_a_tab_builder_fails():
+    from PySide6.QtWidgets import QApplication
+    from atis_clean.app import ATISClean
+
+    app = QApplication.instance() or QApplication([])
+    original_dashboard_tab = ATISClean.dashboard_tab
+
+    def failing_dashboard_tab(self):
+        raise RuntimeError("simulated tab failure")
+
+    ATISClean.dashboard_tab = failing_dashboard_tab
+    try:
+        window = ATISClean()
+        assert window.tabs.count() > 0
+        assert window.centralWidget() is not None
+    finally:
+        ATISClean.dashboard_tab = original_dashboard_tab
+        app.quit()
+
+
 def main():
     test_fallback_candles_span_price()
     test_ai_decision_aliases_and_scanner_compatibility()
     test_paper_trading_rejects_bad_inputs()
+    test_app_starts_when_a_tab_builder_fails()
     rows = market_data_engine.all_rows()
     assert rows, "market rows missing"
 

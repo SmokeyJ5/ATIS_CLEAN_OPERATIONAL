@@ -24,3 +24,6 @@ date,ticker,strategy,action,entry,exit,shares,stop,target,pnl,r_multiple,result,
 2026-07-01,PAAS,Paper Trade,BUY,46.06,,100,44.68,47.67,,,Filled,WATCH
 2026-07-01,SIL,Paper Trade,BUY,79.65,,100,77.26,82.44,,,Filled,WATCH
 2026-07-01,SILJ,Paper Trade,BUY,26.71,,100,25.91,27.64,,,Filled,WATCH
+2026-07-01,COLA,Paper Trade,BUY,10.65,,100,10.64,11.02,,,Filled,AVOID
+2026-07-01,PEP,Paper Trade,BUY,139.77,,100,136.61,144.66,,,Filled,WATCH
+2026-07-01,SCCO,Paper Trade,BUY,171.33,,100,169.2,177.33,,,Filled,WAIT

@@ -27,7 +27,7 @@ from atis_clean.watchlists.manager import ensure_default_watchlists, list_watchl
 from atis_clean.workstation.architecture import architecture_report
 from atis_clean.release.manifest import manifest_text, VERSION
 from atis_clean.core.settings import settings_report, load_settings
-from atis_clean.core.logging import log_event
+from atis_clean.core.logging import log_event, log_error
 from atis_clean.core.events import event_bus, SYMBOL_SELECTED, WATCHLIST_CHANGED
 from atis_clean.chart_widget import ChartWidget
 
@@ -64,8 +64,14 @@ class ATISClean(QMainWindow):
         self.settings = load_settings()
         ensure_default_workspaces()
         ensure_default_watchlists()
-        self.build()
-        self.data_mode.setCurrentText(self.settings.get("data_mode", "Fallback"))
+        try:
+            self.build()
+        except Exception as exc:
+            log_error("ATIS startup initialization failed", exc)
+            self._build_startup_error_ui(exc)
+            return
+        if hasattr(self, "data_mode"):
+            self.data_mode.setCurrentText(self.settings.get("data_mode", "Fallback"))
         # Defer symbol loading until the user searches or selects a ticker.
 
     def panel(self, title):
@@ -76,6 +82,31 @@ class ATISClean(QMainWindow):
         label.setStyleSheet("font-size:16px;font-weight:900;color:#28c7fa;padding-bottom:4px;")
         layout.addWidget(label)
         return frame, layout
+
+    def _build_startup_error_ui(self, exc):
+        root = QWidget()
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(12)
+        layout.addWidget(QLabel("ATIS startup initialization encountered an issue."))
+        layout.addWidget(QLabel(str(exc)))
+        self.status = QLabel("Startup recovery mode active. Check the diagnostics log for details.")
+        self.status.setWordWrap(True)
+        layout.addWidget(self.status)
+        self.setCentralWidget(root)
+
+    def _safe_build_tab(self, title, factory):
+        try:
+            return factory()
+        except Exception as exc:
+            log_error(f"Failed to initialize tab {title}", exc)
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(QLabel(title))
+            message = QLabel("This tab failed to initialize. ATIS will continue with the available tabs.")
+            message.setWordWrap(True)
+            layout.addWidget(message)
+            return widget
 
     def make_readonly(self, widget):
         try:
@@ -136,28 +167,32 @@ class ATISClean(QMainWindow):
         main.addWidget(self.decision)
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.dashboard_tab(), "Dashboard")
-        self.tabs.addTab(self.trading_tab(), "Trading")
-        self.tabs.addTab(self.explorer_tab(), "Explorer")
-        self.tabs.addTab(self.ai_tab(), "AI Analyst")
-        self.tabs.addTab(self.scanner_tab(), "Scanner")
-        self.tabs.addTab(self.decision_30_tab(), "Decision 3.0")
-        self.tabs.addTab(self.scanner_intel_tab(), "Scanner Intel")
-        self.tabs.addTab(self.portfolio_tab(), "Portfolio")
-        self.tabs.addTab(self.journal_tab(), "Journal")
-        self.tabs.addTab(self.alerts_tab(), "Alerts")
-        self.tabs.addTab(self.news_tab(), "News")
-        self.tabs.addTab(self.market_intelligence_tab(), "Market Intelligence")
-        self.tabs.addTab(self.workspace_manager_tab(), "Workspace Manager")
-        self.tabs.addTab(self.paper_trading_tab(), "Paper Trading")
-        self.tabs.addTab(self.strategy_lab_tab(), "Strategy Lab")
-        self.tabs.addTab(self.diagnostics_tab(), "Diagnostics")
-        self.tabs.addTab(self.release_candidate_tab(), "Release Candidate")
-        self.tabs.addTab(self.watchlist_manager_tab(), "Watchlists")
-        self.tabs.addTab(self.workstation_architecture_tab(), "Workstation")
-        self.tabs.addTab(self.integrations_tab(), "Integrations")
-        self.tabs.addTab(self.multi_chart_tab(), "Multi-Chart")
-        self.tabs.addTab(self.data_tab(), "Data Provider")
+        tab_factories = [
+            ("Dashboard", self.dashboard_tab),
+            ("Trading", self.trading_tab),
+            ("Explorer", self.explorer_tab),
+            ("AI Analyst", self.ai_tab),
+            ("Scanner", self.scanner_tab),
+            ("Decision 3.0", self.decision_30_tab),
+            ("Scanner Intel", self.scanner_intel_tab),
+            ("Portfolio", self.portfolio_tab),
+            ("Journal", self.journal_tab),
+            ("Alerts", self.alerts_tab),
+            ("News", self.news_tab),
+            ("Market Intelligence", self.market_intelligence_tab),
+            ("Workspace Manager", self.workspace_manager_tab),
+            ("Paper Trading", self.paper_trading_tab),
+            ("Strategy Lab", self.strategy_lab_tab),
+            ("Diagnostics", self.diagnostics_tab),
+            ("Release Candidate", self.release_candidate_tab),
+            ("Watchlists", self.watchlist_manager_tab),
+            ("Workstation", self.workstation_architecture_tab),
+            ("Integrations", self.integrations_tab),
+            ("Multi-Chart", self.multi_chart_tab),
+            ("Data Provider", self.data_tab),
+        ]
+        for title, factory in tab_factories:
+            self.tabs.addTab(self._safe_build_tab(title, factory), title)
         main.addWidget(self.tabs)
 
         self.status = QLabel("Ready • Type a ticker at the top and ATIS updates every tab")
