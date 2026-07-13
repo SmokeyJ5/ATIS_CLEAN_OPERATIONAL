@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atis_clean.core.paths import atomic_write_text
+from atis_clean.core.qt_runtime import configure_qt_runtime
 from atis_clean.market_data.provider import FallbackProvider, market_data_engine
 from atis_clean.decision.engine import build_ai_decision
 from atis_clean.scanner.engine import scan_rows
@@ -20,6 +21,9 @@ from atis_clean.diagnostics.health import system_health, health_report
 from atis_clean.data import make_row
 from atis_clean.watchlists.manager import ensure_default_watchlists, list_watchlists, load_watchlist, add_symbol, remove_symbol
 from atis_clean.workspace.manager import ensure_default_workspaces, list_workspaces, load_workspace, save_workspace, delete_workspace
+import atis_clean.paper_trading.simulator as paper_simulator
+import atis_clean.watchlists.manager as watchlist_manager
+import atis_clean.workspace.manager as workspace_manager
 
 
 def test_fallback_candles_span_price():
@@ -120,6 +124,38 @@ def test_diagnostics_and_strategy_lab_outputs():
         result = backtest(row, strategy=name)
         assert "report" in result
         assert result["strategy"] == name
+
+
+def test_qt_runtime_configures_font_directory():
+    configured_path = configure_qt_runtime()
+    assert configured_path is not None
+    assert configured_path.exists()
+
+
+def test_workspace_and_watchlist_managers_handle_invalid_payloads(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        config_root = Path(tmp_dir) / "config"
+        monkeypatch.setattr(workspace_manager, "config_root", lambda: config_root)
+        monkeypatch.setattr(watchlist_manager, "config_root", lambda: config_root)
+
+        saved_path = workspace_manager.save_workspace("Regression Workspace", None)
+        assert saved_path.exists()
+        assert workspace_manager.load_workspace("Regression Workspace") == {"workspace_name": "Regression Workspace", "saved_at": workspace_manager.load_workspace("Regression Workspace").get("saved_at")}
+
+        watchlist_path = watchlist_manager.save_watchlist("Broken Watchlist", None)
+        assert watchlist_path.exists()
+        assert watchlist_manager.load_watchlist("Broken Watchlist") == []
+
+
+def test_paper_trading_orders_loader_recovers_from_invalid_state(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        data_dir = Path(tmp_dir)
+        monkeypatch.setattr(paper_simulator, "data_root", lambda: data_dir)
+
+        bad_orders_dir = paper_simulator.orders_path()
+        bad_orders_dir.mkdir(parents=True, exist_ok=True)
+
+        assert paper_simulator.load_orders() == []
 
 
 def test_app_starts_when_a_tab_builder_fails():

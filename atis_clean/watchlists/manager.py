@@ -38,8 +38,27 @@ def ensure_default_watchlists() -> None:
 
 
 def save_watchlist(name: str, symbols: List[str]) -> Path:
-    symbols = [s.strip().upper() for s in symbols if s and s.strip()]
-    payload = {"name": name, "symbols": sorted(set(symbols))}
+    normalized_symbols = []
+    if isinstance(symbols, list):
+        iterable = symbols
+    elif isinstance(symbols, tuple):
+        iterable = list(symbols)
+    elif isinstance(symbols, set):
+        iterable = list(symbols)
+    else:
+        iterable = []
+
+    for value in iterable:
+        if isinstance(value, str):
+            cleaned = value.strip().upper()
+            if cleaned:
+                normalized_symbols.append(cleaned)
+        elif value is not None:
+            cleaned = str(value).strip().upper()
+            if cleaned:
+                normalized_symbols.append(cleaned)
+
+    payload = {"name": name or "Watchlist", "symbols": sorted(set(normalized_symbols))}
     path = watchlist_path(name)
     atomic_write_text(path, json.dumps(payload, indent=2), encoding="utf-8")
     return path
@@ -52,7 +71,12 @@ def load_watchlist(name: str) -> List[str]:
         return []
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return [s.strip().upper() for s in data.get("symbols", []) if s.strip()]
+        if not isinstance(data, dict):
+            return []
+        symbols = data.get("symbols", [])
+        if not isinstance(symbols, list):
+            return []
+        return [s.strip().upper() for s in symbols if isinstance(s, str) and s.strip()]
     except Exception:
         return []
 

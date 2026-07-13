@@ -5,6 +5,7 @@ from pathlib import Path
 import csv
 import io
 import json
+import shutil
 from typing import Dict, List
 
 from atis_clean.core.paths import atomic_write_text, data_root
@@ -83,6 +84,9 @@ def save_account(account: dict) -> None:
 
 def ensure_orders_log() -> Path:
     path = orders_path()
+    if path.exists() and path.is_dir():
+        shutil.rmtree(path)
+
     if not path.exists():
         buffer = io.StringIO()
         writer = csv.DictWriter(buffer, fieldnames=ORDER_HEADERS)
@@ -99,8 +103,11 @@ def log_order(order: dict) -> None:
 
 def load_orders() -> List[dict]:
     path = ensure_orders_log()
-    with path.open("r", newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    try:
+        with path.open("r", newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except (PermissionError, IsADirectoryError, OSError, csv.Error, ValueError):
+        return []
 
 
 def reset_account() -> dict:

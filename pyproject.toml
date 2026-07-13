@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atis-clean-operational"
+version = "0.1.0"
+description = "ATIS Clean Operational"
+requires-python = ">=3.10"
+dependencies = [
+  "PySide6>=6.7",
+  "yfinance>=0.2.40",
+  "pandas>=2.0",
+]
+
+[tool.setuptools]
+packages = ["atis_clean", "atis_clean.alerts", "atis_clean.command_center", "atis_clean.core", "atis_clean.chart_widget", "atis_clean.data", "atis_clean.decision", "atis_clean.diagnostics", "atis_clean.journal", "atis_clean.market_data", "atis_clean.market_intelligence", "atis_clean.paper_trading", "atis_clean.plugins", "atis_clean.portfolio", "atis_clean.providers", "atis_clean.release", "atis_clean.scanner", "atis_clean.strategy_lab", "atis_clean.watchlists", "atis_clean.workspace", "atis_clean.workstation"]

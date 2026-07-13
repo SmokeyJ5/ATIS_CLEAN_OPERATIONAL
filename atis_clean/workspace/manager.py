@@ -67,8 +67,8 @@ def ensure_default_workspaces() -> None:
 
 
 def save_workspace(name: str, data: dict) -> Path:
-    payload = dict(data)
-    payload["workspace_name"] = name
+    payload = dict(data or {}) if isinstance(data, dict) else {}
+    payload["workspace_name"] = name or "Workspace"
     payload["saved_at"] = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
     path = workspace_file(name)
     atomic_write_text(path, json.dumps(payload, indent=2), encoding="utf-8")
@@ -80,8 +80,12 @@ def load_workspace(name: str) -> dict:
     path = workspace_file(name)
     if not path.exists():
         return {}
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
 
 
 def list_workspaces() -> List[str]:
