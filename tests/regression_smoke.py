@@ -14,10 +14,12 @@ from atis_clean.market_data.provider import FallbackProvider, market_data_engine
 from atis_clean.decision.engine import build_ai_decision
 from atis_clean.scanner.engine import scan_rows
 from atis_clean.alerts.engine import evaluate_alerts
-from atis_clean.strategy_lab.backtester import backtest
+from atis_clean.strategy_lab.backtester import backtest, strategy_names
 from atis_clean.paper_trading.simulator import reset_account, buy, sell
-from atis_clean.diagnostics.health import system_health
+from atis_clean.diagnostics.health import system_health, health_report
 from atis_clean.data import make_row
+from atis_clean.watchlists.manager import ensure_default_watchlists, list_watchlists, load_watchlist, add_symbol, remove_symbol
+from atis_clean.workspace.manager import ensure_default_workspaces, list_workspaces, load_workspace, save_workspace, delete_workspace
 
 
 def test_fallback_candles_span_price():
@@ -85,6 +87,41 @@ def test_atomic_write_preserves_existing_file_on_failure():
         assert target.read_text(encoding="utf-8") == "old"
 
 
+def test_search_and_market_data_round_trip():
+    row, err = market_data_engine.get_row("TSLA")
+    assert row, err
+    assert row["ticker"] == "TSLA"
+    assert row["candles"]
+    assert market_data_engine.get_mode() in {"fallback", "live"}
+
+
+def test_watchlists_and_workspaces_persist():
+    ensure_default_watchlists()
+    ensure_default_workspaces()
+
+    add_symbol("Favorites", "AAPL")
+    assert "AAPL" in load_watchlist("Favorites")
+    assert "Favorites" in list_watchlists()
+
+    save_workspace("Regression Workspace", {"selected_symbol": "NVDA", "notes": "test"})
+    loaded_workspace = load_workspace("Regression Workspace")
+    assert loaded_workspace["selected_symbol"] == "NVDA"
+    assert delete_workspace("Regression Workspace") is True
+
+
+def test_diagnostics_and_strategy_lab_outputs():
+    health = system_health()
+    report = health_report()
+    assert health["checks"]
+    assert "ATIS PRODUCTION HEALTH CHECK" in report
+
+    row, _ = market_data_engine.get_row("TSLA")
+    for name in strategy_names():
+        result = backtest(row, strategy=name)
+        assert "report" in result
+        assert result["strategy"] == name
+
+
 def test_app_starts_when_a_tab_builder_fails():
     from PySide6.QtWidgets import QApplication
     from atis_clean.app import ATISClean
@@ -110,6 +147,9 @@ def main():
     test_ai_decision_aliases_and_scanner_compatibility()
     test_paper_trading_rejects_bad_inputs()
     test_atomic_write_preserves_existing_file_on_failure()
+    test_search_and_market_data_round_trip()
+    test_watchlists_and_workspaces_persist()
+    test_diagnostics_and_strategy_lab_outputs()
     test_app_starts_when_a_tab_builder_fails()
     rows = market_data_engine.all_rows()
     assert rows, "market rows missing"
