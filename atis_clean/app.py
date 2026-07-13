@@ -740,16 +740,19 @@ class ATISClean(QMainWindow):
     def current_capital_and_risk(self):
         try:
             capital = float(self.capital_input.currentText()) if hasattr(self, "capital_input") else 20000.0
-        except Exception:
+        except Exception as exc:
+            log_error("Failed to parse portfolio capital input", exc)
             capital = 20000.0
         try:
             risk_pct = float(self.risk_input.currentText()) if hasattr(self, "risk_input") else 1.0
-        except Exception:
+        except Exception as exc:
+            log_error("Failed to parse portfolio risk input", exc)
             risk_pct = 1.0
         try:
             capital = float(capital)
             risk_pct = float(risk_pct)
-        except Exception:
+        except Exception as exc:
+            log_error("Failed to normalize portfolio capital/risk values", exc)
             capital = 20000.0
             risk_pct = 1.0
         return capital, risk_pct

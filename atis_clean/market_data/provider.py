@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from math import sin
+from concurrent.futures import Future, ThreadPoolExecutor
+from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
 from atis_clean.data import SAMPLE, _build_candles_from_row, decision
@@ -82,40 +84,68 @@ class YFinanceProvider:
 
     def __init__(self):
         self.last_error = ""
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="atis-live")
+        self._lock = Lock()
+        self._cache: dict[str, dict] = {}
+        self._inflight: dict[str, Future] = {}
+        self._cache_ttl_seconds = 20
 
     def available_symbols(self) -> List[str]:
         return []
 
+    def _get_cached(self, symbol: str) -> Optional[dict]:
+        row = self._cache.get(symbol)
+        if not row:
+            return None
+        stamp = row.get("_live_fetched_at")
+        if not isinstance(stamp, datetime):
+            return row
+        age = (datetime.now() - stamp).total_seconds()
+        if age > self._cache_ttl_seconds:
+            return None
+        return row
+
+    def _on_fetch_done(self, symbol: str, future: Future) -> None:
+        with self._lock:
+            self._inflight.pop(symbol, None)
+        try:
+            row = future.result()
+            if row:
+                row["_live_fetched_at"] = datetime.now()
+                with self._lock:
+                    self._cache[symbol] = row
+        except Exception as exc:
+            self.last_error = f"Live lookup error for {symbol}: {exc}"
+            log_error("YFinanceProvider._on_fetch_done", exc)
+
+    def _ensure_fetch(self, symbol: str) -> None:
+        with self._lock:
+            if symbol in self._inflight:
+                return
+            future = self._executor.submit(self._get_row_live_blocking, symbol)
+            self._inflight[symbol] = future
+        future.add_done_callback(lambda done_future: self._on_fetch_done(symbol, done_future))
+
     def get_row(self, symbol: str) -> Optional[dict]:
         """
-        Fetch live data with a strict timeout.
+        Fetch live data asynchronously.
 
-        yfinance/network calls can hang. This wrapper prevents the ATIS UI from
-        freezing by giving the live provider only a few seconds before falling
-        back.
+        The UI thread should not block while waiting on network requests. This
+        method returns a fresh cached row when available and schedules a
+        background refresh; otherwise it returns None while lookup is in flight.
         """
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError
-
         symbol = (symbol or "").strip().upper()
         if not symbol:
             self.last_error = "No symbol provided for live lookup."
             return None
 
-        try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(self._get_row_live_blocking, symbol)
-                row = future.result(timeout=4)
-                if row is None:
-                    self.last_error = self.last_error or f"Live lookup for {symbol} returned no data."
-                return row
-        except TimeoutError:
-            self.last_error = f"Live lookup for {symbol} timed out after 4 seconds."
-            log_error("YFinanceProvider.get_row timeout", TimeoutError(f"{symbol} timed out"))
-            return None
-        except Exception as exc:
-            self.last_error = f"Live lookup error for {symbol}: {exc}"
-            log_error("YFinanceProvider.get_row", exc)
-            return None
+        cached = self._get_cached(symbol)
+        self._ensure_fetch(symbol)
+        if cached:
+            return cached
+
+        self.last_error = f"Live lookup in progress for {symbol}."
+        return None
 
     def _get_row_live_blocking(self, symbol: str) -> Optional[dict]:
         symbol = (symbol or "").strip().upper()

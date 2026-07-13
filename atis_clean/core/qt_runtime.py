@@ -1,19 +1,63 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from atis_clean.core.paths import app_root
 
 
+def _candidate_qt_roots() -> list[Path]:
+    roots: list[Path] = []
+
+    # Prefer the currently installed interpreter environment.
+    try:
+        import PySide6  # type: ignore
+
+        roots.append(Path(PySide6.__file__).resolve().parent)
+    except Exception:
+        pass
+
+    # Local source checkout fallback.
+    roots.append(app_root() / ".venv" / "Lib" / "site-packages" / "PySide6")
+
+    # Frozen/runtime bundle candidates.
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            roots.append(Path(meipass) / "PySide6")
+            roots.append(Path(meipass))
+        roots.append(Path(sys.executable).resolve().parent / "PySide6")
+
+    # De-duplicate while preserving order.
+    seen = set()
+    ordered: list[Path] = []
+    for root in roots:
+        key = str(root)
+        if key not in seen:
+            seen.add(key)
+            ordered.append(root)
+    return ordered
+
+
 def configure_qt_runtime() -> Path:
-    """Ensure Qt can resolve its bundled font directory in a local source checkout."""
-    qt_root = app_root() / ".venv" / "Lib" / "site-packages" / "PySide6"
-    fonts_dir = qt_root / "lib" / "fonts"
-    fonts_dir.mkdir(parents=True, exist_ok=True)
+    """Configure Qt plugin/font lookup across source and frozen Windows runtimes."""
+    selected_fonts = app_root() / "fonts"
+    for qt_root in _candidate_qt_roots():
+        plugins_dir = qt_root / "plugins"
+        fonts_dir = qt_root / "lib" / "fonts"
 
-    qt_plugin_path = str(qt_root / "plugins")
-    if qt_plugin_path not in os.environ.get("QT_PLUGIN_PATH", ""):
-        os.environ["QT_PLUGIN_PATH"] = os.pathsep.join(filter(None, [os.environ.get("QT_PLUGIN_PATH", ""), qt_plugin_path]))
+        if plugins_dir.exists():
+            existing = [p for p in os.environ.get("QT_PLUGIN_PATH", "").split(os.pathsep) if p]
+            plugin_path = str(plugins_dir)
+            if plugin_path not in existing:
+                os.environ["QT_PLUGIN_PATH"] = os.pathsep.join(existing + [plugin_path])
 
-    return fonts_dir
+        if fonts_dir.exists():
+            os.environ.setdefault("QT_QPA_FONTDIR", str(fonts_dir))
+            selected_fonts = fonts_dir
+
+        if plugins_dir.exists() and fonts_dir.exists():
+            break
+
+    return selected_fonts

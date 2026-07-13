@@ -14,6 +14,20 @@ python run_atis.py
 python tests\regression_smoke.py
 ```
 
+## Formal endurance soak suite
+
+Run a certification-grade soak pass (default 3 hours):
+
+```powershell
+scripts\run_soak.ps1
+```
+
+Short validation run example:
+
+```powershell
+scripts\run_soak.ps1 -Seconds 60
+```
+
 ## Notes
 
 - Use Fallback mode first.
