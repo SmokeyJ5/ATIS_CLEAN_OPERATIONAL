@@ -94,6 +94,9 @@ def health_report() -> str:
 
 def version_info() -> str:
     build = build_info_path()
-    if build.exists():
-        return build.read_text(encoding="utf-8", errors="ignore").strip()
+    try:
+        if build.exists():
+            return build.read_text(encoding="utf-8", errors="ignore").strip()
+    except OSError:
+        return "ATIS build info unavailable"
     return "ATIS build info unavailable"

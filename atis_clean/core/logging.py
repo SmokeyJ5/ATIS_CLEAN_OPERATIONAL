@@ -29,7 +29,12 @@ def log_event(message: str) -> None:
         with app_log_path().open("a", encoding="utf-8") as handle:
             handle.write(line)
     except OSError:
-        pass
+        try:
+            Path("logs").mkdir(parents=True, exist_ok=True)
+            with app_log_path().open("a", encoding="utf-8") as handle:
+                handle.write(line)
+        except OSError:
+            pass
 
 
 def log_error(context: str, exc: BaseException) -> None:
@@ -42,4 +47,9 @@ def log_error(context: str, exc: BaseException) -> None:
         with error_log_path().open("a", encoding="utf-8") as handle:
             handle.write(text)
     except OSError:
-        pass
+        try:
+            Path("logs").mkdir(parents=True, exist_ok=True)
+            with error_log_path().open("a", encoding="utf-8") as handle:
+                handle.write(text)
+        except OSError:
+            pass

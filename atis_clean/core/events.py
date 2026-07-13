@@ -42,9 +42,10 @@ class EventBus:
         for callback in list(self._subscribers.get(event_name, [])):
             try:
                 callback(event)
-            except Exception:
+            except Exception as exc:
                 # Event bus should never crash the workstation.
-                pass
+                from atis_clean.core.logging import log_error
+                log_error(f"Event bus callback failed for {event_name}", exc)
         return event
 
     def recent_report(self) -> str:

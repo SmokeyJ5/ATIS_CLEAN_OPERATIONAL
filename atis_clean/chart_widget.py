@@ -49,6 +49,23 @@ class ChartWidget(QWidget):
             painter.drawText(self.rect(), Qt.AlignCenter, "No chart data")
             return
 
+        try:
+            candles = [
+                {
+                    "open": float(c.get("open", 0.0)),
+                    "high": float(c.get("high", 0.0)),
+                    "low": float(c.get("low", 0.0)),
+                    "close": float(c.get("close", 0.0)),
+                    "volume": int(c.get("volume", 0)),
+                }
+                for c in candles
+                if isinstance(c, dict)
+            ]
+        except (TypeError, ValueError):
+            painter.setPen(QPen(Qt.white))
+            painter.drawText(self.rect(), Qt.AlignCenter, "Chart data unavailable")
+            return
+
         header_h = 34
         footer_h = 22
         volume_h = 70 if self.show_volume else 0

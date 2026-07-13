@@ -376,9 +376,13 @@ class MarketDataEngine:
         """
         rows = []
         for symbol in self.fallback.available_symbols():
-            row = self.fallback.get_row(symbol)
-            if row:
-                rows.append(row)
+            try:
+                row = self.fallback.get_row(symbol)
+                if row:
+                    rows.append(row)
+            except Exception as exc:
+                self.last_error = f"Fallback row generation failed for {symbol}: {exc}"
+                log_error("MarketDataEngine.all_rows fallback row generation", exc)
         rows.sort(key=lambda item: item["score"], reverse=True)
         for idx, row in enumerate(rows, 1):
             row["rank"] = idx

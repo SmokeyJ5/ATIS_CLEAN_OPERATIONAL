@@ -740,6 +740,12 @@ class ATISClean(QMainWindow):
             risk_pct = float(self.risk_input.currentText()) if hasattr(self, "risk_input") else 1.0
         except Exception:
             risk_pct = 1.0
+        try:
+            capital = float(capital)
+            risk_pct = float(risk_pct)
+        except Exception:
+            capital = 20000.0
+            risk_pct = 1.0
         return capital, risk_pct
 
     def refresh_portfolio_risk(self):
