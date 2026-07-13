@@ -4,6 +4,15 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List
 
 
+def _coerce_float(value, default=None):
+    if value in (None, ""):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 PRESETS = {
     "Day Trade": {
         "min_score": 70,
@@ -98,15 +107,27 @@ def scan_rows(rows: Iterable[dict], preset: str = "Day Trade", custom: dict | No
 
     out = []
     symbols = rules.get("symbols")
+    min_score = _coerce_float(rules.get("min_score", 0), 0.0)
+    min_change = _coerce_float(rules.get("min_change", -100), -100.0)
+    min_rvol = _coerce_float(rules.get("min_rvol", 0), 0.0)
 
     for row in rows:
+        if not isinstance(row, dict):
+            continue
         if symbols and row.get("ticker") not in symbols:
             continue
-        if row.get("score", 0) < float(rules.get("min_score", 0)):
+
+        score = _coerce_float(row.get("score", row.get("ai_score")))
+        change = _coerce_float(row.get("change_pct"))
+        rvol = _coerce_float(row.get("relative_volume"))
+        if score is None or change is None or rvol is None:
             continue
-        if row.get("change_pct", 0) < float(rules.get("min_change", -100)):
+
+        if score < min_score:
             continue
-        if row.get("relative_volume", 0) < float(rules.get("min_rvol", 0)):
+        if change < min_change:
+            continue
+        if rvol < min_rvol:
             continue
         if not _passes_bool(row, "above_vwap", bool(rules.get("require_above_vwap", False))):
             continue

@@ -2180,22 +2180,68 @@ BUSINESS SUMMARY:
 
     def chart_report(self, row):
         timeframe = self.chart_timeframe.currentText() if hasattr(self, "chart_timeframe") else "5m"
+        ticker = row.get('ticker', 'UNKNOWN')
         return (
-            f"CHART ENGINE — {row['ticker']}\n\n"
+            f"CHART ENGINE — {ticker}\n\n"
             f"Timeframe: {timeframe}\n"
-            f"Source: {row.get('data_source')}\n"
-            f"Price: ${row['price']}\n"
-            f"VWAP: ${row['vwap']}\n"
-            f"Day Low: ${row['day_low']}\n"
-            f"Day High: ${row['day_high']}\n\n"
+            f"Source: {row.get('data_source', 'N/A')}\n"
+            f"Price: ${row.get('price', 'N/A')}\n"
+            f"VWAP: ${row.get('vwap', 'N/A')}\n"
+            f"Day Low: ${row.get('day_low', 'N/A')}\n"
+            f"Day High: ${row.get('day_high', 'N/A')}\n\n"
             f"Trade Plan:\n"
-            f"Entry: ${row['entry']}\n"
-            f"Stop: ${row['stop']}\n"
-            f"Target 1: ${row['target1']}\n"
-            f"Target 2: ${row['target2']}\n\n"
+            f"Entry: ${row.get('entry', 'N/A')}\n"
+            f"Stop: ${row.get('stop', 'N/A')}\n"
+            f"Target 1: ${row.get('target1', 'N/A')}\n"
+            f"Target 2: ${row.get('target2', 'N/A')}\n\n"
             f"RSI 14: {row.get('rsi14', 'N/A')} | ATR 14: {row.get('atr14', 'N/A')} | MACD: {row.get('macd', 'N/A')}\n"
-            f"Score: {row['score']}/100 | Action: {row['action']} | Status: {row['status']}"
+            f"Score: {row.get('score', 'N/A')}/100 | Action: {row.get('action', 'N/A')} | Status: {row.get('status', 'N/A')}"
         )
+
+    def _normalize_row(self, row):
+        if not isinstance(row, dict):
+            return {}
+
+        normalized = dict(row)
+        ai = normalized.get("ai_decision") if isinstance(normalized.get("ai_decision"), dict) else None
+        if not ai:
+            ai = build_ai_decision(normalized)
+            normalized["ai_decision"] = ai
+
+        normalized.setdefault("ticker", "")
+        normalized.setdefault("name", normalized.get("ticker", ""))
+        normalized.setdefault("price", normalized.get("entry", 0))
+        normalized.setdefault("score", ai.get("score", normalized.get("ai_score", 0)))
+        normalized.setdefault("action", ai.get("ai_action", "WATCH"))
+        normalized.setdefault("status", normalized.get("status", "UNKNOWN"))
+        normalized.setdefault("probability", normalized.get("probability", 0))
+        normalized.setdefault("confidence", ai.get("ai_confidence", normalized.get("confidence", "Low")))
+        normalized.setdefault("entry", normalized.get("entry", normalized.get("price", 0)))
+        normalized.setdefault("stop", normalized.get("stop", 0))
+        normalized.setdefault("target1", normalized.get("target1", 0))
+        normalized.setdefault("target2", normalized.get("target2", 0))
+        normalized.setdefault("risk_reward", ai.get("risk_reward", normalized.get("risk_reward", 0)))
+        normalized.setdefault("passed", [])
+        normalized.setdefault("missing", [])
+        normalized.setdefault("vwap", normalized.get("price", 0))
+        normalized.setdefault("ema9", normalized.get("price", 0))
+        normalized.setdefault("ema20", normalized.get("price", 0))
+        normalized.setdefault("day_low", normalized.get("price", 0))
+        normalized.setdefault("day_high", normalized.get("price", 0))
+        normalized.setdefault("volume", 0)
+        normalized.setdefault("updated", "")
+        normalized.setdefault("profile", {})
+        normalized.setdefault("news_items", [])
+        normalized.setdefault("candles", [])
+        normalized.setdefault("data_source", "UNKNOWN")
+        normalized.setdefault("relative_volume", 0)
+        normalized.setdefault("change_pct", 0)
+        normalized.setdefault("news", False)
+        normalized.setdefault("new_intraday_high", False)
+        normalized.setdefault("above_vwap", False)
+        normalized.setdefault("above_9ema", False)
+        normalized.setdefault("above_20ema", False)
+        return normalized
 
     def search_now(self):
         self.load_symbol(self.search.text())
@@ -2209,11 +2255,14 @@ BUSINESS SUMMARY:
             self.status.setText(error)
             return
 
+        row = self._normalize_row(row)
         if not self.rows:
-            self.rows = market_data_engine.all_rows()
+            self.rows = [self._normalize_row(r) for r in market_data_engine.all_rows()]
+        else:
+            self.rows = [self._normalize_row(r) for r in self.rows]
         self.selected = row
         # Keep searched row available even if it is not in fallback watchlist.
-        if not any(r["ticker"] == row["ticker"] for r in self.rows):
+        if not any(r.get("ticker") == row.get("ticker") for r in self.rows):
             row["rank"] = 1
             self.rows.insert(0, row)
         if self.search.text().strip().upper() != symbol:
@@ -2227,11 +2276,14 @@ BUSINESS SUMMARY:
         self.status.setText(f"{symbol} loaded across ATIS.")
 
     def update_tables(self):
+        self.rows = [self._normalize_row(r) for r in getattr(self, "rows", [])]
+        if getattr(self, "selected", None):
+            self.selected = self._normalize_row(self.selected)
         for table in [self.watch, self.top_table]:
             table.blockSignals(True)
             table.setRowCount(len(self.rows))
             for r, row in enumerate(self.rows):
-                vals = [row.get("rank", r + 1), row["ticker"], row["score"], row["action"], row["status"]]
+                vals = [row.get("rank", r + 1), row.get("ticker", ""), row.get("score", ""), row.get("action", ""), row.get("status", "")]
                 for c, v in enumerate(vals):
                     item = QTableWidgetItem(str(v))
                     item.setTextAlignment(Qt.AlignCenter)
@@ -2300,37 +2352,41 @@ BUSINESS SUMMARY:
             self.refresh_event_bus()
 
     def row_report(self, row):
-        return f"""SYMBOL: {row['ticker']} — {row['name']}
+        profile = row.get('profile', {}) or {}
+        passed = row.get('passed', []) or []
+        missing = row.get('missing', []) or []
+        ai = row.get('ai_decision') or {}
+        return f"""SYMBOL: {row.get('ticker', 'UNKNOWN')} — {row.get('name', '')}
 
-Price: ${row['price']}
-Change: {row['change_pct']}%
-Volume: {row['volume']:,}
-Relative Volume: {row['relative_volume']}x
-Source: {row['data_source']}
-Sector: {row.get('profile', {}).get('sector', 'N/A')}
-Industry: {row.get('profile', {}).get('industry', 'N/A')}
+Price: ${row.get('price', 'N/A')}
+Change: {row.get('change_pct', 'N/A')}%
+Volume: {row.get('volume', 0):,}
+Relative Volume: {row.get('relative_volume', 'N/A')}x
+Source: {row.get('data_source', 'N/A')}
+Sector: {profile.get('sector', 'N/A')}
+Industry: {profile.get('industry', 'N/A')}
 
-Decision: {row.get('ai_decision', {}).get('ai_action', row['action'])}
-Status: {row['status']}
-Legacy Score: {row['score']}/100
-AI Score: {row.get('ai_decision', {}).get('ai_score', 'N/A')}/100
-Probability: {row['probability']}%
-Confidence: {row.get('ai_decision', {}).get('ai_confidence', row['confidence'])}
+Decision: {ai.get('ai_action', row.get('action', 'N/A'))}
+Status: {row.get('status', 'N/A')}
+Legacy Score: {row.get('score', 'N/A')}/100
+AI Score: {ai.get('ai_score', 'N/A')}/100
+Probability: {row.get('probability', 'N/A')}%
+Confidence: {ai.get('ai_confidence', row.get('confidence', 'N/A'))}
 
 Passed:
-{chr(10).join(['✓ ' + x for x in row['passed']]) or 'None'}
+{chr(10).join(['✓ ' + x for x in passed]) or 'None'}
 
 Missing:
-{chr(10).join(['⚠ ' + x for x in row['missing']]) or 'None'}
+{chr(10).join(['⚠ ' + x for x in missing]) or 'None'}
 """
 
     def ai_report(self, row):
         ai = row.get("ai_decision") or build_ai_decision(row)
-        return ai["summary"]
+        return ai.get("summary", "AI summary unavailable")
 
     def trade_plan(self, row):
         ai = row.get("ai_decision") or build_ai_decision(row)
-        return ai["trade_plan"]
+        return ai.get("trade_plan", "Trade plan unavailable")
 
 
 

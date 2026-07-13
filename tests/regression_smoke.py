@@ -59,6 +59,62 @@ def test_ai_decision_aliases_and_scanner_compatibility():
     assert matches and matches[0]["scanner_preset"] == "All"
 
 
+def test_scanner_handles_malformed_rows():
+    rows = [
+        {
+            "ticker": "TSLA",
+            "score": "bad",
+            "change_pct": "2.0",
+            "relative_volume": "3.0",
+            "above_vwap": True,
+            "above_9ema": True,
+            "above_20ema": True,
+            "news": False,
+            "new_intraday_high": True,
+        },
+        {
+            "ticker": "AAPL",
+            "score": 80,
+            "change_pct": 1.5,
+            "relative_volume": 2.5,
+            "above_vwap": True,
+            "above_9ema": True,
+            "above_20ema": False,
+            "news": False,
+            "new_intraday_high": False,
+        },
+    ]
+    matches = scan_rows(rows, preset="All")
+    assert matches and matches[0]["ticker"] == "AAPL"
+
+
+def test_app_load_symbol_recovers_from_sparse_row(monkeypatch):
+    from PySide6.QtWidgets import QApplication
+    from atis_clean.app import ATISClean
+
+    app = QApplication.instance() or QApplication([])
+    window = ATISClean()
+    sparse_row = {
+        "ticker": "SPARSE",
+        "name": "Sparse",
+        "price": 10.0,
+        "change_pct": 1.0,
+        "volume": 1000,
+        "relative_volume": 1.5,
+        "data_source": "TEST",
+        "profile": {},
+        "candles": [],
+        "passed": [],
+        "missing": [],
+    }
+    monkeypatch.setattr("atis_clean.app.market_data_engine.get_row", lambda symbol: (sparse_row, None))
+
+    window.load_symbol("SPARSE")
+
+    assert window.selected["ticker"] == "SPARSE"
+    app.quit()
+
+
 def test_paper_trading_rejects_bad_inputs():
     reset_account()
     assert buy("TSLA", 0, 100)["status"] == "REJECTED"
