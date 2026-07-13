@@ -135,7 +135,13 @@ class ATISClean(QMainWindow):
         self.search_timer = QTimer(self)
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.search_now)
-        self.search.textEdited.connect(lambda _: self.search_timer.start(600))
+
+        def _debounced_search():
+            if self.search_timer.isActive():
+                self.search_timer.stop()
+            self.search_timer.start(600)
+
+        self.search.textEdited.connect(_debounced_search)
 
         search_btn = QPushButton("Search / Load")
         search_btn.clicked.connect(self.search_now)
@@ -1738,14 +1744,16 @@ class ATISClean(QMainWindow):
             item = self.multi_chart_grid.takeAt(0)
             widget = item.widget()
             if widget:
+                widget.setParent(None)
                 widget.deleteLater()
+        if hasattr(self, "multi_chart_widgets"):
+            self.multi_chart_widgets = []
 
     def rebuild_multi_chart_workspace(self):
         if not hasattr(self, "multi_chart_grid"):
             return
 
         self.clear_multi_chart_grid()
-        self.multi_chart_widgets = []
 
         count = layout_count(self.multi_layout_selector.currentText() if hasattr(self, "multi_layout_selector") else "4 Charts")
         columns = 2 if count <= 4 else 3
@@ -1764,6 +1772,7 @@ class ATISClean(QMainWindow):
             chart = ChartWidget()
             chart.set_timeframe(tf.currentText())
             tf.currentTextChanged.connect(chart.set_timeframe)
+            chart.setAttribute(Qt.WA_DeleteOnClose, False)
 
             control_row.addWidget(QLabel("Symbol:"))
             control_row.addWidget(symbol_label)
