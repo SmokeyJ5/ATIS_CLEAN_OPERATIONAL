@@ -78,7 +78,7 @@ class FallbackProvider:
         return output
 
 
-from atis_clean.core.logging import log_error
+from atis_clean.core.logging import log_error, log_event
 
 
 class YFinanceProvider:
@@ -107,6 +107,35 @@ class YFinanceProvider:
             return
         self._last_logged_errors[key] = now
         log_error(context, exc)
+
+    def _log_event_throttled(
+        self,
+        key: str,
+        message: str,
+        cooldown_seconds: int = 120,
+    ) -> None:
+        now = datetime.now()
+        previous = self._last_logged_errors.get(key)
+        if previous and (now - previous).total_seconds() < cooldown_seconds:
+            return
+        self._last_logged_errors[key] = now
+        log_event(message)
+
+    def _capture_stderr_text(self, key: str, context: str, stderr_text: str, cooldown_seconds: int = 180) -> None:
+        text = (stderr_text or "").strip()
+        if not text:
+            return
+        compact = " ".join(line.strip() for line in text.splitlines() if line.strip())
+        if not compact:
+            return
+        # Keep third-party noise bounded and structured for diagnostics logs.
+        if len(compact) > 240:
+            compact = compact[:240] + "..."
+        self._log_event_throttled(
+            key,
+            f"{context}: {compact}",
+            cooldown_seconds=cooldown_seconds,
+        )
 
     def _check_live_dependencies(self) -> bool:
         if self._dependencies_available is True:
@@ -207,7 +236,15 @@ class YFinanceProvider:
 
         try:
             stock = yf.Ticker(symbol)
-            hist = stock.history(period="5d", interval="5m", prepost=False)
+            hist_stderr = io.StringIO()
+            with redirect_stderr(hist_stderr):
+                hist = stock.history(period="5d", interval="5m", prepost=False)
+            self._capture_stderr_text(
+                f"history_5m:{symbol}",
+                "YFinanceProvider live history stderr",
+                hist_stderr.getvalue(),
+                cooldown_seconds=300,
+            )
             if hist is None or hist.empty:
                 self.last_error = f"yfinance returned no historical data for {symbol}."
                 return None
@@ -249,7 +286,15 @@ class YFinanceProvider:
             tr3 = (hist["Low"] - hist["Close"].shift()).abs()
             atr14 = float(__import__("pandas").concat([tr1, tr2, tr3], axis=1).max(axis=1).rolling(14).mean().dropna().iloc[-1]) if len(hist) >= 20 else max(day_high - day_low, 0.01)
 
-            daily = stock.history(period="5d", interval="1d")
+            daily_stderr = io.StringIO()
+            with redirect_stderr(daily_stderr):
+                daily = stock.history(period="5d", interval="1d")
+            self._capture_stderr_text(
+                f"history_1d:{symbol}",
+                "YFinanceProvider daily history stderr",
+                daily_stderr.getvalue(),
+                cooldown_seconds=300,
+            )
             prev = float(daily["Close"].iloc[-2]) if daily is not None and len(daily) >= 2 else None
             chg = round(((price - prev) / prev) * 100, 2) if prev else 0.0
 
@@ -258,7 +303,15 @@ class YFinanceProvider:
 
             info = {}
             try:
-                info = stock.get_info() or {}
+                info_stderr = io.StringIO()
+                with redirect_stderr(info_stderr):
+                    info = stock.get_info() or {}
+                self._capture_stderr_text(
+                    f"get_info:{symbol}",
+                    "YFinanceProvider get_info stderr",
+                    info_stderr.getvalue(),
+                    cooldown_seconds=300,
+                )
             except (AttributeError, KeyError, TypeError, ValueError, RuntimeError, OSError):
                 info = {}
 
@@ -268,8 +321,15 @@ class YFinanceProvider:
             # yfinance sometimes returns news as list[dict]. Keep this safe.
             news_items = []
             try:
-                with redirect_stderr(io.StringIO()):
+                news_stderr = io.StringIO()
+                with redirect_stderr(news_stderr):
                     raw_news = stock.news or []
+                self._capture_stderr_text(
+                    f"news_stderr:{symbol}",
+                    "YFinanceProvider news stderr",
+                    news_stderr.getvalue(),
+                    cooldown_seconds=300,
+                )
                 for item in raw_news[:8]:
                     content = item.get("content", item) if isinstance(item, dict) else {}
                     title = (

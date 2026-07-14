@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+import time
 import tracemalloc
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -209,6 +210,33 @@ def test_qt_runtime_candidate_roots_include_frozen_bundle(monkeypatch):
         assert (exe_path.resolve().parent / "PySide6") in roots
 
 
+def test_frozen_windows_startup_smoke(monkeypatch):
+    from PySide6.QtWidgets import QApplication
+    from atis_clean.app import ATISClean
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_root = Path(tmp_dir)
+        exe_path = tmp_root / "dist" / "ATIS.exe"
+        exe_path.parent.mkdir(parents=True, exist_ok=True)
+        exe_path.write_text("", encoding="utf-8")
+
+        monkeypatch.setattr(qt_runtime.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(qt_runtime.sys, "_MEIPASS", str(tmp_root), raising=False)
+        monkeypatch.setattr(qt_runtime.sys, "executable", str(exe_path), raising=False)
+
+        configured_path = configure_qt_runtime()
+        assert configured_path is not None
+
+        app = QApplication.instance() or QApplication([])
+        window = ATISClean()
+        try:
+            assert window.centralWidget() is not None
+        finally:
+            window.close()
+            window.deleteLater()
+            app.quit()
+
+
 def test_manifest_write_is_idempotent_when_release_metadata_unchanged(monkeypatch):
     with tempfile.TemporaryDirectory() as tmp_dir:
         manifest_path = Path(tmp_dir) / "RELEASE_MANIFEST.json"
@@ -243,6 +271,45 @@ def test_app_python_heap_trend_is_bounded():
 
     # Peak-to-current gap should remain bounded after repeated create/destroy cycles.
     assert peak - current < 32 * 1024 * 1024
+
+
+def test_global_search_live_fallback_latency_slo(monkeypatch):
+    from PySide6.QtWidgets import QApplication
+    from atis_clean.app import ATISClean
+
+    app = QApplication.instance() or QApplication([])
+    window = ATISClean()
+
+    attempts = {"count": 0}
+    resolved_row = make_row("TSLA")
+    resolved_row["ticker"] = "CRWD"
+    resolved_row["name"] = "CrowdStrike Holdings"
+    resolved_row["data_source"] = "Yahoo Finance Live Auto-Lookup"
+
+    def fake_get_row(symbol: str):
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            return None, f"Live lookup in progress for {symbol}."
+        return resolved_row, ""
+
+    monkeypatch.setattr("atis_clean.app.market_data_engine.get_row", fake_get_row)
+
+    start = time.monotonic()
+    window.load_symbol("CRWD")
+    while time.monotonic() - start < 2.5:
+        app.processEvents()
+        if window.selected and window.selected.get("ticker") == "CRWD":
+            break
+        time.sleep(0.02)
+
+    elapsed = time.monotonic() - start
+    try:
+        assert window.selected and window.selected.get("ticker") == "CRWD"
+        assert elapsed <= 2.5
+    finally:
+        window.close()
+        window.deleteLater()
+        app.quit()
 
 
 def test_workspace_and_watchlist_managers_handle_invalid_payloads(monkeypatch):
