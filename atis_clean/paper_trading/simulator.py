@@ -8,11 +8,13 @@ import json
 import shutil
 from typing import Dict, List
 
+from atis_clean.core.logging import log_error
 from atis_clean.core.paths import atomic_write_text, data_root
 from atis_clean.core.settings import load_settings
 
 
 ORDER_HEADERS = ["time", "ticker", "side", "quantity", "price", "value", "status", "notes"]
+_ACCOUNT_CACHE: dict | None = None
 
 
 def _normalize_position(pos: dict) -> dict:
@@ -65,21 +67,48 @@ def orders_path() -> Path:
 
 
 def ensure_account() -> dict:
+    global _ACCOUNT_CACHE
     path = account_path()
     if not path.exists():
         account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
         save_account(account)
         return account
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
-        save_account(account)
-        return account
+
+    last_io_error = None
+    for _ in range(3):
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                _ACCOUNT_CACHE = loaded
+                return loaded
+        except json.JSONDecodeError:
+            break
+        except (PermissionError, OSError) as exc:
+            last_io_error = exc
+
+    if _ACCOUNT_CACHE is not None:
+        return dict(_ACCOUNT_CACHE)
+
+    if last_io_error is not None:
+        log_error("paper_trading.ensure_account read retries exhausted", last_io_error)
+
+    account = {"cash": starting_cash(), "realized_pnl": 0.0, "positions": {}}
+    save_account(account)
+    return account
 
 
 def save_account(account: dict) -> None:
-    atomic_write_text(account_path(), json.dumps(account, indent=2), encoding="utf-8")
+    global _ACCOUNT_CACHE
+    last_error = None
+    for _ in range(3):
+        try:
+            atomic_write_text(account_path(), json.dumps(account, indent=2), encoding="utf-8")
+            _ACCOUNT_CACHE = dict(account)
+            return
+        except OSError as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
 
 
 def ensure_orders_log() -> Path:
@@ -95,10 +124,15 @@ def ensure_orders_log() -> Path:
     return path
 
 
-def log_order(order: dict) -> None:
+def log_order(order: dict) -> bool:
     path = ensure_orders_log()
-    with path.open("a", newline="", encoding="utf-8") as f:
-        csv.DictWriter(f, fieldnames=ORDER_HEADERS).writerow({h: order.get(h, "") for h in ORDER_HEADERS})
+    try:
+        with path.open("a", newline="", encoding="utf-8") as f:
+            csv.DictWriter(f, fieldnames=ORDER_HEADERS).writerow({h: order.get(h, "") for h in ORDER_HEADERS})
+    except (PermissionError, OSError, csv.Error, ValueError) as exc:
+        log_error("paper_trading.log_order", exc)
+        return False
+    return True
 
 
 def load_orders() -> List[dict]:
@@ -145,7 +179,12 @@ def buy(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
     pos["lots"].append({"quantity": quantity, "cost": round(price, 4)})
     account["positions"][ticker] = pos
     account["cash"] = round(float(account["cash"]) - value, 2)
-    save_account(account)
+    try:
+        save_account(account)
+    except OSError as exc:
+        global _ACCOUNT_CACHE
+        _ACCOUNT_CACHE = dict(account)
+        log_error("paper_trading.buy save_account", exc)
 
     order = {
         "time": datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
@@ -157,8 +196,11 @@ def buy(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
         "status": "FILLED",
         "notes": notes,
     }
-    log_order(order)
-    return {"status": "FILLED", "message": f"Bought {quantity} {ticker} @ ${price}", "order": order}
+    logged = log_order(order)
+    message = f"Bought {quantity} {ticker} @ ${price}"
+    if not logged:
+        message += " (order log write deferred)"
+    return {"status": "FILLED", "message": message, "order": order}
 
 
 def sell(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
@@ -207,7 +249,12 @@ def sell(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
     account["cash"] = round(float(account["cash"]) + value, 2)
     account["realized_pnl"] = round(float(account.get("realized_pnl", 0)) + realized, 2)
     account["positions"] = positions
-    save_account(account)
+    try:
+        save_account(account)
+    except OSError as exc:
+        global _ACCOUNT_CACHE
+        _ACCOUNT_CACHE = dict(account)
+        log_error("paper_trading.sell save_account", exc)
 
     order = {
         "time": datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"),
@@ -219,10 +266,13 @@ def sell(ticker: str, quantity: int, price: float, notes: str = "") -> dict:
         "status": "FILLED",
         "notes": notes or f"Realized P/L ${realized}",
     }
-    log_order(order)
+    logged = log_order(order)
+    message = f"Sold {quantity} {ticker} @ ${price}; P/L ${realized}"
+    if not logged:
+        message += " (order log write deferred)"
     return {
         "status": "FILLED",
-        "message": f"Sold {quantity} {ticker} @ ${price}; P/L ${realized}",
+        "message": message,
         "order": order,
         "realized_pnl": realized,
     }

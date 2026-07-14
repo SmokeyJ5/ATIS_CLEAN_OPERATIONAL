@@ -5,9 +5,9 @@ from pathlib import Path
 import json
 
 
-VERSION = "v3.0.0-STABLE"
+VERSION = "v4.0.1"
 BUILD_NAME = "ATIS Clean Operational"
-PHASE = "v3.0 Stable Certified Baseline"
+PHASE = "Watchlist Rank Hotfix"
 
 
 def manifest() -> dict:
@@ -64,10 +64,10 @@ def manifest_text() -> str:
     return "\n".join(lines)
 
 
-from atis_clean.core.paths import release_manifest_path
+from atis_clean.core.paths import atomic_write_text, release_manifest_path
 
 
 def write_manifest_file() -> Path:
     path = release_manifest_path()
-    path.write_text(json.dumps(manifest(), indent=2), encoding="utf-8")
+    atomic_write_text(path, json.dumps(manifest(), indent=2) + "\n", encoding="utf-8")
     return path

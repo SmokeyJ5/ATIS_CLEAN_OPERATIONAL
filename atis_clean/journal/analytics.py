@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import csv
+import io
 from typing import Dict, List
 
-from atis_clean.core.paths import data_root
+from atis_clean.core.logging import log_error
+from atis_clean.core.paths import atomic_write_text, data_root
 
 HEADERS = ["date", "ticker", "strategy", "action", "entry", "exit", "shares", "stop", "target", "pnl", "r_multiple", "result", "notes"]
 
@@ -17,8 +19,9 @@ def journal_path() -> Path:
 def ensure_journal_file() -> Path:
     path = journal_path()
     if not path.exists():
-        with path.open("w", newline="", encoding="utf-8") as f:
-            csv.DictWriter(f, fieldnames=HEADERS).writeheader()
+        buffer = io.StringIO()
+        csv.DictWriter(buffer, fieldnames=HEADERS).writeheader()
+        atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
     return path
 
 def _coerce_float(value, default=0.0) -> float:
@@ -53,15 +56,22 @@ def planned_trade_from_row(row: dict, strategy: str = "Paper Trade") -> dict:
 
 def append_trade(trade: dict) -> Path:
     path = ensure_journal_file()
-    with path.open("a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=HEADERS)
-        writer.writerow({h: trade.get(h, "") for h in HEADERS})
+    try:
+        with path.open("a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=HEADERS)
+            writer.writerow({h: trade.get(h, "") for h in HEADERS})
+    except (PermissionError, OSError, csv.Error, ValueError) as exc:
+        log_error("journal.append_trade", exc)
     return path
 
 def load_trades() -> List[dict]:
     path = ensure_journal_file()
-    with path.open("r", newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    try:
+        with path.open("r", newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except (PermissionError, OSError, csv.Error, ValueError) as exc:
+        log_error("journal.load_trades", exc)
+        return []
 
 def sample_trades() -> List[dict]:
     return [

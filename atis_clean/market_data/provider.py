@@ -89,6 +89,45 @@ class YFinanceProvider:
         self._cache: dict[str, dict] = {}
         self._inflight: dict[str, Future] = {}
         self._cache_ttl_seconds = 20
+        self._dependencies_available: Optional[bool] = None
+        self._last_logged_errors: dict[str, datetime] = {}
+
+    def _log_error_throttled(
+        self,
+        key: str,
+        context: str,
+        exc: BaseException,
+        cooldown_seconds: int = 120,
+    ) -> None:
+        now = datetime.now()
+        previous = self._last_logged_errors.get(key)
+        if previous and (now - previous).total_seconds() < cooldown_seconds:
+            return
+        self._last_logged_errors[key] = now
+        log_error(context, exc)
+
+    def _check_live_dependencies(self) -> bool:
+        if self._dependencies_available is True:
+            return True
+
+        try:
+            import yfinance as _yf  # noqa: F401
+            import pandas as _pd  # noqa: F401
+            self._dependencies_available = True
+            return True
+        except Exception as exc:
+            self._dependencies_available = False
+            self.last_error = (
+                "Live data unavailable: required packages are missing. "
+                "Install yfinance and pandas, then restart ATIS."
+            )
+            self._log_error_throttled(
+                "live_dependency_missing",
+                "YFinanceProvider live dependencies unavailable",
+                exc,
+                cooldown_seconds=3600,
+            )
+            return False
 
     def available_symbols(self) -> List[str]:
         return []
@@ -116,7 +155,11 @@ class YFinanceProvider:
                     self._cache[symbol] = row
         except Exception as exc:
             self.last_error = f"Live lookup error for {symbol}: {exc}"
-            log_error("YFinanceProvider._on_fetch_done", exc)
+            self._log_error_throttled(
+                f"fetch_done:{symbol}",
+                "YFinanceProvider._on_fetch_done",
+                exc,
+            )
 
     def _ensure_fetch(self, symbol: str) -> None:
         with self._lock:
@@ -139,6 +182,9 @@ class YFinanceProvider:
             self.last_error = "No symbol provided for live lookup."
             return None
 
+        if not self._check_live_dependencies():
+            return None
+
         cached = self._get_cached(symbol)
         self._ensure_fetch(symbol)
         if cached:
@@ -152,15 +198,10 @@ class YFinanceProvider:
         if not symbol:
             return None
 
-        try:
-            import yfinance as yf
-        except Exception as exc:
-            self.last_error = (
-                "yfinance package is unavailable or failed to import. "
-                "Install yfinance and retry."
-            )
-            log_error("YFinanceProvider._get_row_live_blocking import yfinance", exc)
+        if not self._check_live_dependencies():
             return None
+
+        import yfinance as yf
 
         try:
             stock = yf.Ticker(symbol)
@@ -248,7 +289,12 @@ class YFinanceProvider:
                         })
             except Exception as exc:
                 self.last_error = f"News parsing failed for {symbol}: {exc}"
-                log_error("YFinanceProvider._get_row_live_blocking news parsing", exc)
+                self._log_error_throttled(
+                    f"news_parse:{symbol}",
+                    "YFinanceProvider._get_row_live_blocking news parsing",
+                    exc,
+                    cooldown_seconds=300,
+                )
                 news_items = []
 
             profile = {
@@ -312,7 +358,11 @@ class YFinanceProvider:
             return row
         except Exception as exc:
             self.last_error = f"YFinance internal exception for {symbol}: {exc}"
-            log_error("YFinanceProvider._get_row_live_blocking", exc)
+            self._log_error_throttled(
+                f"live_blocking:{symbol}",
+                "YFinanceProvider._get_row_live_blocking",
+                exc,
+            )
             return None
 
     def _candles_from_history(self, hist, row: dict) -> List[dict]:
@@ -366,6 +416,11 @@ class MarketDataEngine:
             self.last_error = self.live.last_error
             if row:
                 return row, ""
+            if self.last_error:
+                if "in progress" in self.last_error.lower():
+                    return None, self.last_error
+                if "required packages are missing" in self.last_error.lower():
+                    return None, self.last_error
             self.last_error = (
                 self.last_error or f"Live data unavailable for {symbol}; using fallback if available."
             )
@@ -389,6 +444,8 @@ class MarketDataEngine:
         if row:
             row["data_source"] = "Yahoo Finance Live Auto-Lookup"
             return row, ""
+        if self.last_error:
+            return None, self.last_error
 
         return None, (
             f"{symbol} is not in fallback data and live lookup did not return data. "

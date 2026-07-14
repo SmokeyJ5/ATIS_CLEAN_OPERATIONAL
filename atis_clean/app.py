@@ -62,6 +62,12 @@ class ATISClean(QMainWindow):
         self.syncing = False
         self.scanner_results = []
         self.settings = load_settings()
+        self._pending_symbol = ""
+        self._pending_symbol_attempts = 0
+        self._max_pending_symbol_attempts = 5
+        self._symbol_retry_timer = QTimer(self)
+        self._symbol_retry_timer.setSingleShot(True)
+        self._symbol_retry_timer.timeout.connect(self._retry_pending_symbol_load)
         ensure_default_workspaces()
         ensure_default_watchlists()
         try:
@@ -2136,20 +2142,6 @@ BUSINESS SUMMARY:
         if hasattr(self, "market_briefing_text"):
             self.refresh_market_intelligence()
 
-    def scanner_intel_selected(self):
-        r = self.scanner_intel_table.currentRow()
-        if r >= 0:
-            item = self.scanner_intel_table.item(r, 1)
-            if item:
-                self.load_symbol(item.text())
-
-    def portfolio_selected(self):
-        r = self.portfolio_table.currentRow()
-        if r >= 0:
-            item = self.portfolio_table.item(r, 0)
-            if item:
-                self.load_symbol(item.text())
-
     def change_data_mode(self, mode):
         """
         Change provider mode safely.
@@ -2249,14 +2241,48 @@ BUSINESS SUMMARY:
     def search_now(self):
         self.load_symbol(self.search.text())
 
+    def _schedule_pending_symbol_retry(self, symbol: str, error: str) -> None:
+        if self._pending_symbol != symbol:
+            self._pending_symbol = symbol
+            self._pending_symbol_attempts = 0
+
+        if self._pending_symbol_attempts >= self._max_pending_symbol_attempts:
+            self.status.setText(error or f"{symbol} live lookup timed out.")
+            self._pending_symbol = ""
+            self._pending_symbol_attempts = 0
+            return
+
+        self._pending_symbol_attempts += 1
+        delay_ms = min(350 * self._pending_symbol_attempts, 1500)
+        if self._symbol_retry_timer.isActive():
+            self._symbol_retry_timer.stop()
+        self._symbol_retry_timer.start(delay_ms)
+        self.status.setText(
+            f"Live lookup in progress for {symbol}. Retrying automatically "
+            f"({self._pending_symbol_attempts}/{self._max_pending_symbol_attempts})..."
+        )
+
+    def _retry_pending_symbol_load(self):
+        if self._pending_symbol:
+            self.load_symbol(self._pending_symbol)
+
     def load_symbol(self, symbol):
         symbol = (symbol or "").strip().upper()
         if not symbol:
             return
         row, error = market_data_engine.get_row(symbol)
         if not row:
+            if "in progress" in (error or "").lower():
+                self._schedule_pending_symbol_retry(symbol, error)
+                return
             self.status.setText(error)
             return
+
+        if symbol == self._pending_symbol:
+            self._pending_symbol = ""
+            self._pending_symbol_attempts = 0
+            if self._symbol_retry_timer.isActive():
+                self._symbol_retry_timer.stop()
 
         row = self._normalize_row(row)
         if not self.rows:

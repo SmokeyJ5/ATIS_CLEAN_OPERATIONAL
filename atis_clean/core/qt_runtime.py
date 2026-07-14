@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 
+from atis_clean.core.logging import log_error
 from atis_clean.core.paths import app_root
 
 
@@ -15,8 +16,8 @@ def _candidate_qt_roots() -> list[Path]:
         import PySide6  # type: ignore
 
         roots.append(Path(PySide6.__file__).resolve().parent)
-    except Exception:
-        pass
+    except (ImportError, AttributeError, OSError) as exc:
+        log_error("qt_runtime PySide6 discovery failed", exc)
 
     # Local source checkout fallback.
     roots.append(app_root() / ".venv" / "Lib" / "site-packages" / "PySide6")

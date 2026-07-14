@@ -2,7 +2,6 @@ import argparse
 import os
 import time
 
-import pytest
 from PySide6.QtWidgets import QApplication
 
 from atis_clean.app import ATISClean
@@ -11,6 +10,7 @@ from atis_clean.paper_trading.simulator import reset_account, buy, sell
 
 
 def run_soak(duration_seconds: int = 10_800) -> dict:
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     app = QApplication.instance() or QApplication([])
     market_data_engine.set_mode("fallback")
     reset_account()
@@ -74,9 +74,8 @@ def run_soak(duration_seconds: int = 10_800) -> dict:
     }
 
 
-@pytest.mark.skipif(os.environ.get("ATIS_ENABLE_SOAK") != "1", reason="Set ATIS_ENABLE_SOAK=1 to run endurance soak suite")
 def test_endurance_soak_suite():
-    duration = int(os.environ.get("ATIS_SOAK_SECONDS", "10800"))
+    duration = int(os.environ.get("ATIS_SOAK_SECONDS", "60"))
     stats = run_soak(duration)
     assert stats["startup_failures"] == 0, stats
     assert stats["symbol_failures"] == 0, stats

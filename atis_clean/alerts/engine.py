@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 import csv
+import io
 from pathlib import Path
 from typing import List
 
+from atis_clean.core.logging import log_error
 from atis_clean.core.paths import data_root
 
 
@@ -20,23 +22,33 @@ def alert_log_path() -> Path:
 def ensure_alert_log() -> Path:
     path = alert_log_path()
     if not path.exists():
-        with path.open("w", newline="", encoding="utf-8") as f:
-            csv.DictWriter(f, fieldnames=ALERT_HEADERS).writeheader()
+        from atis_clean.core.paths import atomic_write_text
+
+        buffer = io.StringIO()
+        csv.DictWriter(buffer, fieldnames=ALERT_HEADERS).writeheader()
+        atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
     return path
 
 
 def log_alert(alert: dict) -> Path:
     path = ensure_alert_log()
     row = {h: alert.get(h, "") for h in ALERT_HEADERS}
-    with path.open("a", newline="", encoding="utf-8") as f:
-        csv.DictWriter(f, fieldnames=ALERT_HEADERS).writerow(row)
+    try:
+        with path.open("a", newline="", encoding="utf-8") as f:
+            csv.DictWriter(f, fieldnames=ALERT_HEADERS).writerow(row)
+    except (PermissionError, OSError, csv.Error, ValueError) as exc:
+        log_error("alerts.log_alert", exc)
     return path
 
 
 def load_alerts() -> List[dict]:
     path = ensure_alert_log()
-    with path.open("r", newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    try:
+        with path.open("r", newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except (PermissionError, OSError, csv.Error, ValueError) as exc:
+        log_error("alerts.load_alerts", exc)
+        return []
 
 
 def _coerce_float(value, default=0.0) -> float:
