@@ -2,7 +2,7 @@
   "app": "ATIS Clean Operational",
   "version": "v4.0.1",
   "phase": "Watchlist Rank Hotfix",
-  "build_time": "2026-07-13 09:30:37 PM",
+  "build_time": "2026-07-13 09:48:33 PM",
   "core_features": [
     "Single global search",
     "Fallback/live market data architecture",
