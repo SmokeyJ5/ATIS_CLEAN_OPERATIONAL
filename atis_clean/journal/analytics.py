@@ -91,7 +91,7 @@ def _num(value, default=0.0):
         if value in ("", None):
             return default
         return float(value)
-    except Exception:
+    except (TypeError, ValueError):
         return default
 
 def performance_metrics(trades: List[dict] | None = None) -> dict:

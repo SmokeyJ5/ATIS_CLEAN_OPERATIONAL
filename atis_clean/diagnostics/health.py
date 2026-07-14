@@ -30,7 +30,7 @@ def check_module(name: str) -> dict:
     try:
         __import__(f"atis_clean.{name}")
         return {"module": name, "status": "PASS", "message": "Import OK"}
-    except Exception as exc:
+    except (ImportError, ModuleNotFoundError, AttributeError, RuntimeError, OSError, TypeError, ValueError) as exc:
         return {"module": name, "status": "FAIL", "message": f"{type(exc).__name__}: {exc}"}
 
 

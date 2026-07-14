@@ -27,7 +27,7 @@ def strategy_names():
 def _num(value, default=0.0):
     try:
         return float(value)
-    except Exception:
+    except (TypeError, ValueError):
         return default
 
 

@@ -41,11 +41,15 @@ class ProviderRouter:
         return [getattr(p, "name", p.__class__.__name__) for p in self.providers]
 
     def first_success(self, symbol: str) -> ProviderResult:
+        last_error = ""
         for provider in self.providers:
             try:
                 row = provider.get_row(symbol)
                 if row:
                     return ProviderResult(symbol=symbol, provider=getattr(provider, "name", "Unknown"), status="OK", data=row)
-            except Exception as exc:
-                last = str(exc)
-        return ProviderResult(symbol=symbol, provider="None", status="MISS", data=None, error="No provider returned data.")
+            except (AttributeError, TypeError, ValueError, RuntimeError, OSError) as exc:
+                last_error = str(exc)
+        message = "No provider returned data."
+        if last_error:
+            message = f"{message} Last provider error: {last_error}"
+        return ProviderResult(symbol=symbol, provider="None", status="MISS", data=None, error=message)

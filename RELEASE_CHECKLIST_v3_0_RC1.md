@@ -1,4 +1,4 @@
-# ATIS v3.0.0-rc1 Release Checklist
+# ATIS v4.0.1 Release Checklist
 
 ## Required checks
 - [ ] App starts
@@ -22,8 +22,8 @@
 ## Regression command
 
 ```powershell
-python tests\regression_smoke.py
+scripts\run_regression.ps1
 ```
 
 ## Safety
-ATIS v3.0.0-rc1 does not send live broker orders. Paper trading is simulated only.
+ATIS v4.0.1 does not send live broker orders. Paper trading is simulated only.

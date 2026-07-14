@@ -48,7 +48,7 @@ def starting_cash() -> float:
     settings = load_settings()
     try:
         return float(settings.get("paper_account_starting_cash", 100000.0))
-    except Exception:
+    except (TypeError, ValueError):
         return 100000.0
 
 
@@ -294,7 +294,7 @@ def account_summary(price_lookup=None) -> dict:
             try:
                 lookup_price = price_lookup(ticker)
                 current = float(lookup_price) if lookup_price not in (None, "") else avg
-            except Exception:
+            except (TypeError, ValueError, AttributeError, RuntimeError, OSError):
                 current = avg
         value = qty * current
         pnl = (current - avg) * qty

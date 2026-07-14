@@ -11,7 +11,7 @@ python run_atis.py
 ## Regression test
 
 ```powershell
-python tests\regression_smoke.py
+scripts\run_regression.ps1
 ```
 
 ## Formal endurance soak suite

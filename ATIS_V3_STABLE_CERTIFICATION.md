@@ -1,19 +1,20 @@
-# ATIS v3.0 Stable Certification
+# ATIS v4.0.1 Stable Certification
 
 ## Certification Status
-This build is the ATIS v3.0 Stable baseline package created from the user's uploaded current project.
+This build is the ATIS v4.0.1 stable baseline package for production hardening validation.
 
 ## Automated Checks Completed
 - Python compile check: PASS
-- Backend regression smoke: PASS
+- Full pytest gate: PASS
 - One global QLineEdit search check: PASS
 - Required project files present: PASS
-- Phase modules import through regression script: PASS
+- Phase modules import through certification gates: PASS
 
 ## Manual UI Checks To Run On Windows
 Run:
 
 ```powershell
+scripts\run_regression.ps1
 python run_atis.py
 ```
 
@@ -53,7 +54,7 @@ For each, confirm:
 - Verify no real broker order is sent
 
 ## Safety
-ATIS v3.0 Stable is a decision-support and paper-trading platform. It is not an autopilot and does not send live broker orders.
+ATIS v4.0.1 Stable is a decision-support and paper-trading platform. It is not an autopilot and does not send live broker orders.
 
 
 ## v3.0.1 All-Symbol Search Update

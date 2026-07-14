@@ -7,12 +7,14 @@ if (Test-Path $venvPython) {
 	if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 	& $venvPython "scripts\check_manifest_cleanliness.py"
 	if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-	& $venvPython "tests\regression_smoke.py"
+	& $venvPython -m pytest -q
+	if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
 	Write-Warning "Local .venv Python not found, falling back to ambient python."
 	python "scripts\find_todos.py"
 	if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 	python "scripts\check_manifest_cleanliness.py"
 	if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-	python "tests\regression_smoke.py"
+	python -m pytest -q
+	if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

@@ -6,10 +6,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+COMPILE_EXCLUDES = {"__pycache__", ".git", ".venv", "build", "dist", "logs", "data"}
+
 def compile_all():
     errors = []
     for py in ROOT.rglob("*.py"):
-        if "__pycache__" in py.parts or ".git" in py.parts:
+        if any(part in COMPILE_EXCLUDES for part in py.parts):
             continue
         try:
             py_compile.compile(str(py), doraise=True)
@@ -62,6 +64,10 @@ def main():
     assert app_py.count("QLineEdit(") == 1, "Expected exactly one global search box"
 
     print("ATIS v3.0 Stable Certification PASS")
+
+
+def test_stable_certification_main():
+    main()
 
 if __name__ == "__main__":
     main()
