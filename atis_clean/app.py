@@ -31,6 +31,15 @@ from atis_clean.core.logging import log_event, log_error
 from atis_clean.core.events import event_bus, SYMBOL_SELECTED, WATCHLIST_CHANGED
 from atis_clean.chart_widget import ChartWidget
 
+
+UI_RECOVERY_EXCEPTIONS = (
+    AttributeError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+    OSError,
+)
+
 STYLE = """
 QMainWindow{background:#070d14;}
 QWidget{background:#070d14;color:white;font-family:Segoe UI;}
@@ -64,7 +73,7 @@ class ATISClean(QMainWindow):
         self.settings = load_settings()
         self._pending_symbol = ""
         self._pending_symbol_attempts = 0
-        self._max_pending_symbol_attempts = 5
+        self._max_pending_symbol_attempts = 8
         self._symbol_retry_timer = QTimer(self)
         self._symbol_retry_timer.setSingleShot(True)
         self._symbol_retry_timer.timeout.connect(self._retry_pending_symbol_load)
@@ -72,7 +81,7 @@ class ATISClean(QMainWindow):
         ensure_default_watchlists()
         try:
             self.build()
-        except Exception as exc:
+        except UI_RECOVERY_EXCEPTIONS as exc:
             log_error("ATIS startup initialization failed", exc)
             self._build_startup_error_ui(exc)
             return
@@ -104,7 +113,7 @@ class ATISClean(QMainWindow):
     def _safe_build_tab(self, title, factory):
         try:
             return factory()
-        except Exception as exc:
+        except UI_RECOVERY_EXCEPTIONS as exc:
             log_error(f"Failed to initialize tab {title}", exc)
             widget = QWidget()
             layout = QVBoxLayout(widget)
@@ -746,18 +755,18 @@ class ATISClean(QMainWindow):
     def current_capital_and_risk(self):
         try:
             capital = float(self.capital_input.currentText()) if hasattr(self, "capital_input") else 20000.0
-        except Exception as exc:
+        except (TypeError, ValueError) as exc:
             log_error("Failed to parse portfolio capital input", exc)
             capital = 20000.0
         try:
             risk_pct = float(self.risk_input.currentText()) if hasattr(self, "risk_input") else 1.0
-        except Exception as exc:
+        except (TypeError, ValueError) as exc:
             log_error("Failed to parse portfolio risk input", exc)
             risk_pct = 1.0
         try:
             capital = float(capital)
             risk_pct = float(risk_pct)
-        except Exception as exc:
+        except (TypeError, ValueError) as exc:
             log_error("Failed to normalize portfolio capital/risk values", exc)
             capital = 20000.0
             risk_pct = 1.0
@@ -1855,7 +1864,7 @@ class ATISClean(QMainWindow):
             if abs(value) >= 1_000_000:
                 return f"${value/1_000_000:.2f}M"
             return f"${value:,.2f}"
-        except Exception:
+        except (TypeError, ValueError, OverflowError):
             return str(value)
 
 
@@ -2253,7 +2262,7 @@ BUSINESS SUMMARY:
             return
 
         self._pending_symbol_attempts += 1
-        delay_ms = min(350 * self._pending_symbol_attempts, 1500)
+        delay_ms = min(200 * self._pending_symbol_attempts, 1200)
         if self._symbol_retry_timer.isActive():
             self._symbol_retry_timer.stop()
         self._symbol_retry_timer.start(delay_ms)

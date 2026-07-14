@@ -43,6 +43,18 @@ def manifest() -> dict:
     }
 
 
+def _release_fingerprint() -> dict:
+    """Fields that should trigger a manifest rewrite when changed."""
+    m = manifest()
+    return {
+        "app": m["app"],
+        "version": m["version"],
+        "phase": m["phase"],
+        "core_features": m["core_features"],
+        "safety": m["safety"],
+    }
+
+
 def manifest_text() -> str:
     m = manifest()
     lines = [
@@ -69,5 +81,23 @@ from atis_clean.core.paths import atomic_write_text, release_manifest_path
 
 def write_manifest_file() -> Path:
     path = release_manifest_path()
-    atomic_write_text(path, json.dumps(manifest(), indent=2) + "\n", encoding="utf-8")
+
+    existing: dict | None = None
+    if path.exists():
+        try:
+            existing_payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(existing_payload, dict):
+                existing = existing_payload
+        except (OSError, json.JSONDecodeError, TypeError, ValueError, UnicodeDecodeError):
+            existing = None
+
+    current = manifest()
+    if existing:
+        fingerprint = _release_fingerprint()
+        unchanged = all(existing.get(key) == fingerprint[key] for key in fingerprint)
+        if unchanged and isinstance(existing.get("build_time"), str) and existing.get("build_time"):
+            # Keep existing build_time and avoid dirtying the worktree on each startup.
+            return path
+
+    atomic_write_text(path, json.dumps(current, indent=2) + "\n", encoding="utf-8")
     return path

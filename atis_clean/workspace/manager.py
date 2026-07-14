@@ -84,7 +84,7 @@ def load_workspace(name: str) -> dict:
         with path.open("r", encoding="utf-8") as f:
             payload = json.load(f)
         return payload if isinstance(payload, dict) else {}
-    except Exception:
+    except (OSError, json.JSONDecodeError, TypeError, ValueError, UnicodeDecodeError):
         return {}
 
 
@@ -96,7 +96,7 @@ def list_workspaces() -> List[str]:
             with path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
             names.append(data.get("workspace_name") or path.stem.replace("_", " "))
-        except Exception:
+        except (OSError, json.JSONDecodeError, TypeError, ValueError, UnicodeDecodeError):
             names.append(path.stem.replace("_", " "))
     return sorted(set(names))
 

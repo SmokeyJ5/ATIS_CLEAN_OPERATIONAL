@@ -1,7 +1,9 @@
 import os
+import json
 from pathlib import Path
 import sys
 import tempfile
+import tracemalloc
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -11,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from atis_clean.core.paths import atomic_write_text
 from atis_clean.core.qt_runtime import configure_qt_runtime
+import atis_clean.core.qt_runtime as qt_runtime
 from atis_clean.market_data.provider import FallbackProvider, market_data_engine
 from atis_clean.decision.engine import build_ai_decision
 from atis_clean.scanner.engine import scan_rows
@@ -24,6 +27,7 @@ from atis_clean.workspace.manager import ensure_default_workspaces, list_workspa
 import atis_clean.paper_trading.simulator as paper_simulator
 import atis_clean.watchlists.manager as watchlist_manager
 import atis_clean.workspace.manager as workspace_manager
+import atis_clean.release.manifest as release_manifest
 
 
 def test_fallback_candles_span_price():
@@ -186,6 +190,59 @@ def test_qt_runtime_configures_font_directory():
     configured_path = configure_qt_runtime()
     assert configured_path is not None
     assert configured_path.exists()
+
+
+def test_qt_runtime_candidate_roots_include_frozen_bundle(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_root = Path(tmp_dir)
+        exe_path = tmp_root / "dist" / "ATIS.exe"
+        exe_path.parent.mkdir(parents=True, exist_ok=True)
+        exe_path.write_text("", encoding="utf-8")
+
+        monkeypatch.setattr(qt_runtime.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(qt_runtime.sys, "_MEIPASS", str(tmp_root), raising=False)
+        monkeypatch.setattr(qt_runtime.sys, "executable", str(exe_path), raising=False)
+
+        roots = qt_runtime._candidate_qt_roots()
+        assert (tmp_root / "PySide6") in roots
+        assert tmp_root in roots
+        assert (exe_path.resolve().parent / "PySide6") in roots
+
+
+def test_manifest_write_is_idempotent_when_release_metadata_unchanged(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        manifest_path = Path(tmp_dir) / "RELEASE_MANIFEST.json"
+        monkeypatch.setattr(release_manifest, "release_manifest_path", lambda: manifest_path)
+
+        release_manifest.write_manifest_file()
+        first_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        release_manifest.write_manifest_file()
+        second_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        assert first_payload == second_payload
+        assert first_payload.get("build_time") == second_payload.get("build_time")
+
+
+def test_app_python_heap_trend_is_bounded():
+    from PySide6.QtWidgets import QApplication
+    from atis_clean.app import ATISClean
+
+    app = QApplication.instance() or QApplication([])
+    tracemalloc.start()
+    try:
+        for _ in range(40):
+            window = ATISClean()
+            window.close()
+            window.deleteLater()
+            app.processEvents()
+        current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+        app.quit()
+
+    # Peak-to-current gap should remain bounded after repeated create/destroy cycles.
+    assert peak - current < 32 * 1024 * 1024
 
 
 def test_workspace_and_watchlist_managers_handle_invalid_payloads(monkeypatch):

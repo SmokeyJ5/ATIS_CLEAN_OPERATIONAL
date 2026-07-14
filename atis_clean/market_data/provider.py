@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import io
+from contextlib import redirect_stderr
 from dataclasses import dataclass
 from datetime import datetime
 from math import sin
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import CancelledError, Future, ThreadPoolExecutor
 from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
@@ -115,7 +117,7 @@ class YFinanceProvider:
             import pandas as _pd  # noqa: F401
             self._dependencies_available = True
             return True
-        except Exception as exc:
+        except (ImportError, ModuleNotFoundError) as exc:
             self._dependencies_available = False
             self.last_error = (
                 "Live data unavailable: required packages are missing. "
@@ -153,7 +155,7 @@ class YFinanceProvider:
                 row["_live_fetched_at"] = datetime.now()
                 with self._lock:
                     self._cache[symbol] = row
-        except Exception as exc:
+        except (CancelledError, RuntimeError, OSError, TypeError, ValueError, AttributeError) as exc:
             self.last_error = f"Live lookup error for {symbol}: {exc}"
             self._log_error_throttled(
                 f"fetch_done:{symbol}",
@@ -257,7 +259,7 @@ class YFinanceProvider:
             info = {}
             try:
                 info = stock.get_info() or {}
-            except Exception:
+            except (AttributeError, KeyError, TypeError, ValueError, RuntimeError, OSError):
                 info = {}
 
             # Company profile / explorer metadata.
@@ -266,7 +268,8 @@ class YFinanceProvider:
             # yfinance sometimes returns news as list[dict]. Keep this safe.
             news_items = []
             try:
-                raw_news = stock.news or []
+                with redirect_stderr(io.StringIO()):
+                    raw_news = stock.news or []
                 for item in raw_news[:8]:
                     content = item.get("content", item) if isinstance(item, dict) else {}
                     title = (
@@ -287,7 +290,7 @@ class YFinanceProvider:
                             "publisher": publisher or "News",
                             "link": link or "",
                         })
-            except Exception as exc:
+            except (AttributeError, KeyError, TypeError, ValueError) as exc:
                 self.last_error = f"News parsing failed for {symbol}: {exc}"
                 self._log_error_throttled(
                     f"news_parse:{symbol}",
@@ -356,7 +359,7 @@ class YFinanceProvider:
             row.update(decision(row))
             row["candles"] = self._candles_from_history(hist.tail(80), row)
             return row
-        except Exception as exc:
+        except (AttributeError, KeyError, TypeError, ValueError, RuntimeError, OSError) as exc:
             self.last_error = f"YFinance internal exception for {symbol}: {exc}"
             self._log_error_throttled(
                 f"live_blocking:{symbol}",
@@ -376,7 +379,7 @@ class YFinanceProvider:
                     "close": round(float(item["Close"]), 2),
                     "volume": int(item["Volume"]),
                 })
-        except Exception:
+        except (AttributeError, KeyError, TypeError, ValueError):
             return FallbackProvider().get_candles(row["ticker"], row)
         return candles or FallbackProvider().get_candles(row["ticker"], row)
 
@@ -467,7 +470,7 @@ class MarketDataEngine:
                 row = self.fallback.get_row(symbol)
                 if row:
                     rows.append(row)
-            except Exception as exc:
+            except (AttributeError, KeyError, TypeError, ValueError) as exc:
                 self.last_error = f"Fallback row generation failed for {symbol}: {exc}"
                 log_error("MarketDataEngine.all_rows fallback row generation", exc)
         rows.sort(key=lambda item: item["score"], reverse=True)

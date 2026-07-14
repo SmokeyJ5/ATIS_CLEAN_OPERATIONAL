@@ -77,7 +77,7 @@ def load_watchlist(name: str) -> List[str]:
         if not isinstance(symbols, list):
             return []
         return [s.strip().upper() for s in symbols if isinstance(s, str) and s.strip()]
-    except Exception:
+    except (OSError, json.JSONDecodeError, TypeError, ValueError, UnicodeDecodeError):
         return []
 
 
@@ -88,7 +88,7 @@ def list_watchlists() -> List[str]:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             names.append(data.get("name") or path.stem.replace("_", " "))
-        except Exception:
+        except (OSError, json.JSONDecodeError, TypeError, ValueError, UnicodeDecodeError):
             names.append(path.stem.replace("_", " "))
     return sorted(set(names))
 
